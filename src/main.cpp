@@ -1,5 +1,3 @@
-#include "openglwindow.hpp"
-
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -9,6 +7,9 @@
 #include <QtGui/QScreen>
 #include <QtCore/qmath.h>
 #include <QWheelEvent>
+
+#include "openglwindow.hpp"
+#include "octree.hpp"
 
 typedef std::vector<float> ASC;
 
@@ -45,8 +46,20 @@ ViewWindow::ViewWindow()
     , my(0.f)
     , mz(0.f)
 {
-    loadASC("data/Grp1-2014_Simplified.asc", m_points);
-//    loadASC("data/sphere.asc", m_points);
+//    loadASC("data/Grp1-2014_Simplified.asc", m_points);
+    loadASC("sphere.asc", m_points);
+
+    std::vector<int> indexes;
+    indexes.resize(m_points.size()/6);
+    for(unsigned int i = 0; i < indexes.size(); ++i)
+        indexes[i] = i;
+
+    Octree octree(m_points, indexes, 10, 1000, 10.f, QVector3D(mx, my, mz));
+
+    //std::vector<float> res = octree.getNbOf(QVector3D(m_points[6*57+0], m_points[6*57+1], m_points[6*57+2]), 10.f);
+
+    //for(unsigned int i = 0; i < res.size(); i += 6)
+    //    std::cout << "(" << res[i+0] << " ; " << res[i+1] << " ; " << res[i+2] << ")" << std::endl;
 }
 
 void ViewWindow::loadASC(const std::string& filename, ASC& result)

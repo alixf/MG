@@ -10,8 +10,8 @@
 fpour
 
 si nombre de faces contenu > valeur
-   créer 8 fils pour le noeud courant
-   recommencer avec chacun des 8 fils
+   créer 8 m_children pour le noeud courant
+   recommencer avec chacun des 8 m_children
 fsi
 */
 
@@ -83,8 +83,73 @@ std::vector<float> Octree::getNbOf(const QVector3D &p, float distance)
     return m_children[getChildIndex(p)]->getNbOf(p, distance);
 }
 
-QVector3D Octree::getFirstCollision(const QVector3D& /*v*/, float /*distance*/) {
-    return QVector3D();
+QVector3D Octree::getFirstCollision(std::vector<float> vertices, const QVector3D &pos, const QVector3D &dir, float width) {
+
+    if (m_children != NULL) {
+
+        if (pos.x() < m_center.x() && pos.y() < m_center.y() && pos.z() < m_center.z())
+            m_children[0]->getFirstCollision(vertices, pos, dir, width);
+        else if (pos.x() < m_center.x() && pos.y() < m_center.y() && pos.z() > m_center.z())
+            m_children[1]->getFirstCollision(vertices, pos, dir, width);
+        else if (pos.x() < m_center.x() && pos.y() > m_center.y() && pos.z() < m_center.z())
+            m_children[2]->getFirstCollision(vertices, pos, dir, width);
+        else if (pos.x() < m_center.x() && pos.y() > m_center.y() && pos.z() > m_center.z())
+            m_children[3]->getFirstCollision(vertices, pos, dir, width);
+        else if (pos.x() > m_center.x() && pos.y() < m_center.y() && pos.z() < m_center.z())
+            m_children[4]->getFirstCollision(vertices, pos, dir, width);
+        else if (pos.x() > m_center.x() && pos.y() < m_center.y() && pos.z() > m_center.z())
+            m_children[5]->getFirstCollision(vertices, pos, dir, width);
+        else if (pos.x() > m_center.x() && pos.y() > m_center.y() && pos.z() < m_center.z())
+            m_children[6]->getFirstCollision(vertices, pos, dir, width);
+        else
+            m_children[7]->getFirstCollision(vertices, pos, dir, width);
+    }
+
+    else {
+        std::vector<int> pointsInter;
+
+        for (size_t i = 0; i < m_indexes.size(); ++i) {
+            if (distancePointToRay(pos, dir, QVector3D(vertices[m_indexes[i]*3], vertices[m_indexes[i]*3 +1], vertices[m_indexes[i]*3 + 2]) ) < width)
+                pointsInter.push_back(i);
+        }
+
+        float min = pointsInter[0];
+        QVector3D pointDistMin;
+
+        for (size_t i = 1; i < pointsInter.size(); ++i) {
+            const QVector3D vec = QVector3D(vertices[pointsInter[i]*3], vertices[pointsInter[i]*3+1], vertices[pointsInter[i]*3+2]);
+            float distance = distancePointToPoint(vec, pos);
+            if (distance < min) {
+                min = distance;
+                pointDistMin = QVector3D(vertices[pointsInter[i]], vertices[pointsInter[i]+ 1], vertices[pointsInter[i]+2]);
+            }
+        }
+
+        return pointDistMin;
+
+    }
+
+    return QVector3D(0,0,0);
+}
+
+float Octree::distancePointToRay(const QVector3D& origin, const QVector3D& dir, const QVector3D& point)
+{
+    QVector3D dirToPoint = QVector3D(point.x() - origin.x(), point.y() - origin.y(), point.z() - origin.z());
+
+    float scalarP = dir.x() * dirToPoint.x() +  dir.y() * dirToPoint.y() + dir.z() * dirToPoint.z();
+    float norm = sqrt(dir.x() * dir.x() + dir.y() * dir.y() + dir.z() * dir.z()) *
+                 sqrt(dirToPoint.x() * dirToPoint.x() + dirToPoint.y() * dirToPoint.y() + dirToPoint.z() * dirToPoint.z());
+
+    float angle =  acos(scalarP / norm);
+
+    return sin(angle) * distancePointToPoint(origin, point);
+
+
+}
+
+float Octree::distancePointToPoint(const QVector3D &pos1,const  QVector3D &pos2) {
+    return sqrt((pos1.x() - pos2.x()) * (pos1.x() - pos2.x()) + (pos1.y() - pos2.y()) * (pos1.y() - pos2.y()) + (pos1.z() - pos2.z()) * (pos1.z() - pos2.z()));
+
 }
 
 int Octree::getChildIndex(QVector3D p)

@@ -2,21 +2,9 @@
 #include <cmath>
 
 
-/*pour i de 0 à nombreDeFace faire
-   si face[i] est inclu dans la boite courante
-      inclure i dans la liste des faces contenus dans le noeud
-      incrémenté nombre de face contenu
-   fsi
-fpour
-
-si nombre de faces contenu > valeur
-   créer 8 m_children pour le noeud courant
-   recommencer avec chacun des 8 m_children
-fsi
-*/
-
-Octree::Octree(const std::vector<float>& vertices, const std::vector<int>& indexes, unsigned int maxHeight, unsigned int maxVertices, float halfSize, const QVector3D& center) : m_vertices(vertices), m_center(center), m_halfSize(halfSize)
+Octree::Octree(std::vector<float>& vertices, const std::vector<int>& indexes, unsigned int maxHeight, unsigned int maxVertices, float halfSize, const QVector3D& center, const unsigned int maxLeaf) : m_vertices(vertices), m_center(center), m_halfSize(halfSize)
 {
+
     std::cout << "new octree at " << m_center.x() << ";" << m_center.y() << ";" << m_center.z() << std::endl;
     // Check if vertices are inside the octree
     for (unsigned int  i = 0; i < indexes.size(); ++i)
@@ -29,17 +17,29 @@ Octree::Octree(const std::vector<float>& vertices, const std::vector<int>& index
             vertices[indexes[i]*6+2] > m_center.z() - m_halfSize)
                 m_indexes.push_back(indexes[i]);
     }
+    if(m_indexes.size() > 0) ++m_nbLeaf;
+    if(vertices.size() == indexes.size()) m_nbLeaf = 0;
 
     for(int i = 0; i < 8; i++)
         m_children[i] = NULL;
 
     // Create children if needed
-    if (m_indexes.size() > maxVertices && maxHeight > 0)
+
+    if ((m_indexes.size() > maxVertices && maxHeight > 0) && m_nbLeaf < maxLeaf)
     {
+
         std::vector<QVector3D> childCenters = getCenters(center, halfSize / 2);
 
         for (unsigned int i = 0; i < childCenters.size(); ++i)
-            m_children[i] = new Octree(vertices, m_indexes, maxHeight-1, maxVertices, halfSize/2, childCenters[i]);
+            m_children[i] = new Octree(vertices, m_indexes, maxHeight-1, maxVertices, halfSize/2, childCenters[i], maxLeaf);
+    }
+
+    if(maxLeaf > 0){
+        std::vector<int> index;
+        index.resize(maxLeaf);
+        std::vector<float> vertice;
+        vertice.resize(maxLeaf*3);
+
     }
 }
 
@@ -58,7 +58,7 @@ std::vector<QVector3D> Octree::getCenters (QVector3D center, float halfSize)
     return result;
 }
 
-std::vector<float> Octree::getNbOf(const QVector3D &p, float distance)
+std::vector<float> Octree::getNbOf(const QVector3D &p, float distance) const
 {
     if(m_children[0] == NULL)
     {
@@ -83,7 +83,7 @@ std::vector<float> Octree::getNbOf(const QVector3D &p, float distance)
     return m_children[getChildIndex(p)]->getNbOf(p, distance);
 }
 
-QVector3D Octree::getFirstCollision(std::vector<float> vertices, const QVector3D &pos, const QVector3D &dir, float width) {
+QVector3D Octree::getFirstCollision(std::vector<float> vertices, const QVector3D &pos, const QVector3D &dir, float width) const{
 
     if (m_children != NULL) {
 
@@ -132,7 +132,7 @@ QVector3D Octree::getFirstCollision(std::vector<float> vertices, const QVector3D
     return QVector3D(0,0,0);
 }
 
-float Octree::distancePointToRay(const QVector3D& origin, const QVector3D& dir, const QVector3D& point)
+float Octree::distancePointToRay(const QVector3D& origin, const QVector3D& dir, const QVector3D& point) const
 {
     QVector3D dirToPoint = QVector3D(point.x() - origin.x(), point.y() - origin.y(), point.z() - origin.z());
 
@@ -147,12 +147,12 @@ float Octree::distancePointToRay(const QVector3D& origin, const QVector3D& dir, 
 
 }
 
-float Octree::distancePointToPoint(const QVector3D &pos1,const  QVector3D &pos2) {
+float Octree::distancePointToPoint(const QVector3D &pos1,const  QVector3D &pos2) const{
     return sqrt((pos1.x() - pos2.x()) * (pos1.x() - pos2.x()) + (pos1.y() - pos2.y()) * (pos1.y() - pos2.y()) + (pos1.z() - pos2.z()) * (pos1.z() - pos2.z()));
 
 }
 
-int Octree::getChildIndex(QVector3D p)
+int Octree::getChildIndex(QVector3D p) const
 {
     int index = 0;
     for(int x = -1; x <= 1; x += 2)
@@ -176,7 +176,34 @@ iterator octree::end() {
 */
 
 void
-Octree::printOctree()
+Octree::printOctree() const
 {
 
+}
+
+void
+Octree::decimation(std::vector<int>& indexes, std::vector<float>& vertices, unsigned int currentIndex)
+{    
+    //is a leaf
+    if(m_children == NULL){
+        float meanX, meanY, meanZ;
+        meanX = meanY = meanZ = 0.f;
+        std::size_t nbIndex =  m_indexes.size();
+        for(std::size_t i = 0; i < nbIndex; ++i){
+            meanX += m_vertices[m_indexes[i]];
+            meanY += m_vertices[m_indexes[i]+1];
+            meanZ += m_vertices[m_indexes[i]+2];
+        }
+        meanX /= nbIndex;
+        meanY /= nbIndex;
+        meanZ /= nbIndex;
+        vertices.push_back(meanX);
+        vertices.push_back(meanY);
+        vertices.push_back(meanZ);
+        indexes.push_back(currentIndex++);
+    } else {
+        for(int i = 0; i < 8; ++i){
+            m_children[i]->decimation(++currentIndex);
+        }
+    }
 }

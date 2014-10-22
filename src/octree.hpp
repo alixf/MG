@@ -14,7 +14,7 @@ public :
     std::vector<float> getNbOf(const QVector3D &p, float distance) const;
     QVector3D getFirstCollision(std::vector<float> vertices, const QVector3D &pos, const QVector3D &dir, float width) const;
     void printOctree() const;
-    void decimation(const unsigned int nbPoint, std::vector<int>& newIndVec);
+    void decimation(std::vector<int>& indexes, std::vector<float>& vertices, unsigned int);
     //iterator beginAt(unsigned int level);
     //iterator end();
 

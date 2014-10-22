@@ -203,7 +203,7 @@ Octree::decimation(std::vector<int>& indexes, std::vector<float>& vertices, unsi
         indexes.push_back(currentIndex++);
     } else {
         for(int i = 0; i < 8; ++i){
-            m_children[i]->decimation(++currentIndex);
+            m_children[i]->decimation(indexes, vertices, ++currentIndex);
         }
     }
 }

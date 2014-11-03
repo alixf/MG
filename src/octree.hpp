@@ -15,8 +15,10 @@ public :
     QVector3D getFirstCollision(std::vector<float> vertices, const QVector3D &pos, const QVector3D &dir, float width) const;
     void printOctree() const;
     void decimation(std::vector<int>& indexes, std::vector<float>& vertices, unsigned int);
+    static unsigned int getNbLeaf() {return Octree::m_nbLeaf;}
     //iterator beginAt(unsigned int level);
     //iterator end();
+
 
 private :
     float distancePointToRay(const QVector3D& origin, const QVector3D& dir, const QVector3D& point) const;
@@ -29,7 +31,9 @@ private :
     Octree* m_children[8];
     QVector3D m_center;
     float m_halfSize;
-    unsigned int m_nbLeaf;
+
+    static short INIT;
+    static unsigned int m_nbLeaf;
 };
 
 #endif // OCTREE_HPP

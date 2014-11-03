@@ -1,11 +1,12 @@
 #include "octree.hpp"
 #include <cmath>
 
+short Octree::INIT = 0;
+unsigned int Octree::m_nbLeaf = 0;
 
 Octree::Octree(std::vector<float>& vertices, const std::vector<int>& indexes, unsigned int maxHeight, unsigned int maxVertices, float halfSize, const QVector3D& center, const unsigned int maxLeaf) : m_vertices(vertices), m_center(center), m_halfSize(halfSize)
 {
-
-    std::cout << "new octree at " << m_center.x() << ";" << m_center.y() << ";" << m_center.z() << std::endl;
+    short test = 0;
     // Check if vertices are inside the octree
     for (unsigned int  i = 0; i < indexes.size(); ++i)
     {
@@ -14,11 +15,14 @@ Octree::Octree(std::vector<float>& vertices, const std::vector<int>& indexes, un
             vertices[indexes[i]*6+1] < m_center.y() + m_halfSize &&
             vertices[indexes[i]*6+1] > m_center.y() - m_halfSize &&
             vertices[indexes[i]*6+2] < m_center.z() + m_halfSize &&
-            vertices[indexes[i]*6+2] > m_center.z() - m_halfSize)
+            vertices[indexes[i]*6+2] > m_center.z() - m_halfSize){
+                test = 1;
                 m_indexes.push_back(indexes[i]);
+        }
+
     }
-    if(m_indexes.size() > 0) ++m_nbLeaf;
-    if(vertices.size() == indexes.size()) m_nbLeaf = 0;
+    Octree::m_nbLeaf += test;
+
 
     for(int i = 0; i < 8; i++)
         m_children[i] = NULL;
@@ -29,18 +33,20 @@ Octree::Octree(std::vector<float>& vertices, const std::vector<int>& indexes, un
     {
 
         std::vector<QVector3D> childCenters = getCenters(center, halfSize / 2);
-
-        for (unsigned int i = 0; i < childCenters.size(); ++i)
+        --Octree::m_nbLeaf;
+        for (unsigned int i = 0; i < 8; ++i){
             m_children[i] = new Octree(vertices, m_indexes, maxHeight-1, maxVertices, halfSize/2, childCenters[i], maxLeaf);
+        }
     }
 
-    if(maxLeaf > 0){
+
+    /*if(maxLeaf > 0 && ){
         std::vector<int> index;
         index.resize(maxLeaf);
         std::vector<float> vertice;
         vertice.resize(maxLeaf*3);
 
-    }
+    }*/
 }
 
 std::vector<QVector3D> Octree::getCenters (QVector3D center, float halfSize)
@@ -185,21 +191,33 @@ void
 Octree::decimation(std::vector<int>& indexes, std::vector<float>& vertices, unsigned int currentIndex)
 {    
     //is a leaf
-    if(m_children == NULL){
+    if(m_children[0] == NULL){
         float meanX, meanY, meanZ;
+        float meanNX, meanNY, meanNZ;
         meanX = meanY = meanZ = 0.f;
+        meanNX = meanNY = meanNZ = 0.f;
         std::size_t nbIndex =  m_indexes.size();
         for(std::size_t i = 0; i < nbIndex; ++i){
-            meanX += m_vertices[m_indexes[i]];
-            meanY += m_vertices[m_indexes[i]+1];
-            meanZ += m_vertices[m_indexes[i]+2];
+            meanX += m_vertices[m_indexes[i]*6];
+            meanY += m_vertices[m_indexes[i]*6+1];
+            meanZ += m_vertices[m_indexes[i]*6+2];
+
+            meanNX += m_vertices[m_indexes[i]*6+3];
+            meanNY += m_vertices[m_indexes[i]*6+4];
+            meanNZ += m_vertices[m_indexes[i]*6+5];
         }
         meanX /= nbIndex;
         meanY /= nbIndex;
         meanZ /= nbIndex;
+        meanNX /= nbIndex;
+        meanNY /= nbIndex;
+        meanNZ /= nbIndex;
         vertices.push_back(meanX);
         vertices.push_back(meanY);
         vertices.push_back(meanZ);
+        vertices.push_back(meanNX);
+        vertices.push_back(meanNY);
+        vertices.push_back(meanNZ);
         indexes.push_back(currentIndex++);
     } else {
         for(int i = 0; i < 8; ++i){

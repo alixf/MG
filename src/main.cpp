@@ -19,6 +19,7 @@ public:
     ViewWindow();
     void initialize();
     void render();
+    void updatePoints(bool);
 
 private:
     GLuint loadShader(GLenum type, const char *source);
@@ -29,6 +30,7 @@ private:
     GLuint m_colAttr;
     GLuint m_matrixUniform;
     ASC m_points;
+    std::vector<int> indexes;
     unsigned int pointsCount;
     QOpenGLShaderProgram *m_program;
     int m_frame;
@@ -36,6 +38,8 @@ private:
     GLfloat* colors;
     float m_scale;
     float mx, my, mz;
+    std::vector<int> m_DecIndexes;
+    std::vector<float> m_DecVertices;
 };
 
 ViewWindow::ViewWindow()
@@ -45,21 +49,62 @@ ViewWindow::ViewWindow()
     , mx(0.f)
     , my(0.f)
     , mz(0.f)
+
 {
 //    loadASC("data/Grp1-2014_Simplified.asc", m_points);
     loadASC("sphere.asc", m_points);
 
-    std::vector<int> indexes;
+    //std::vector<int> indexes;
     indexes.resize(m_points.size()/6);
     for(unsigned int i = 0; i < indexes.size(); ++i)
         indexes[i] = i;
 
-    Octree octree(m_points, indexes, 10, 1000, 10.f, QVector3D(mx, my, mz));
+     Octree octree(m_points, indexes, 10, 200, 10.f, QVector3D(mx, my, mz), 100);
+    std::cout << "nbLeaf : " << octree.getNbLeaf() << std::endl;
+     octree.decimation(m_DecIndexes, m_DecVertices, 0);
+
+
+    //m_DecIndexes.resize(100);
+    //m_DecVertices.reserve(100);
 
     //std::vector<float> res = octree.getNbOf(QVector3D(m_points[6*57+0], m_points[6*57+1], m_points[6*57+2]), 10.f);
 
     //for(unsigned int i = 0; i < res.size(); i += 6)
     //    std::cout << "(" << res[i+0] << " ; " << res[i+1] << " ; " << res[i+2] << ")" << std::endl;
+}
+
+//Draw decimated tree or full tree
+void ViewWindow::updatePoints(bool drawDecVertices)
+{
+    float scaleFactor = 0.9f;
+    size_t decVertSize = m_DecIndexes.size();
+    std::cout << "m_DecIndexes.size() = " << m_DecIndexes.size() << std::endl;
+    size_t vertSize = m_points.size() / 6;
+
+    if(drawDecVertices){
+        unsigned int i = 0;
+        for(; i < decVertSize; ++i)
+        {
+            //std::cout << "i : " << i << std::endl;
+            vertices[i*3+0] = m_DecVertices[i*6+0]*scaleFactor;
+            vertices[i*3+1] = m_DecVertices[i*6+1]*scaleFactor;
+            vertices[i*3+2] = m_DecVertices[i*6+2]*scaleFactor;
+        }
+        for(; i < pointsCount; ++i){
+            vertices[i*3+0] = 0.f;
+            vertices[i*3+1] = 0.f;
+            vertices[i*3+2] = 0.f;
+        }
+        pointsCount = decVertSize;
+        std::cout << "Data updated according to the decimation" << std::endl;
+    } else {
+        pointsCount = m_points.size() / 6;
+        for(unsigned int i = 0; i < pointsCount; ++i){
+            vertices[i*3+0] = m_points[i*6+0]*scaleFactor;
+            vertices[i*3+1] = m_points[i*6+1]*scaleFactor;
+            vertices[i*3+2] = m_points[i*6+2]*scaleFactor;
+        }
+    }
 }
 
 void ViewWindow::loadASC(const std::string& filename, ASC& result)
@@ -172,35 +217,47 @@ void ViewWindow::initialize()
     m_colAttr = m_program->attributeLocation("colAttr");
     m_matrixUniform = m_program->uniformLocation("matrix");
 
-    float scaleFactor = 0.01f;
+    float scaleFactor = 0.9f;
     mx *= scaleFactor;
     my *= scaleFactor;
     mz *= scaleFactor;
     vertices = new GLfloat[pointsCount*3];
+
     for(unsigned int i = 0; i < pointsCount; ++i)
     {
         vertices[i*3+0] = m_points[i*6+0]*scaleFactor;
         vertices[i*3+1] = m_points[i*6+1]*scaleFactor;
         vertices[i*3+2] = m_points[i*6+2]*scaleFactor;
+
     }
     colors = new GLfloat[pointsCount*3];
     for(unsigned int i = 0; i < pointsCount; ++i)
     {
-        if (m_points[i*6+3] == 0.f &&
-            m_points[i*6+4] == 0.f &&
-            m_points[i*6+5] == 0.f)
-        {
-            colors[i*3+1] = 1.f;
-            colors[i*3+2] = 1.f;
-            colors[i*3+0] = 1.f;
-        }
-        else
-        {
-            colors[i*3+1] = 0.5f + 0.5f * m_points[i*6+3];
-            colors[i*3+2] = 0.5f + 0.5f * m_points[i*6+4];
-            colors[i*3+0] = 0.5f + 0.5f * m_points[i*6+5];
-        }
+        colors[i*3+1] = 1.f;
+        colors[i*3+2] = 1.f;
+        colors[i*3+0] = 1.f;
+//        if (m_points[i*6+3] == 0.f &&
+//            m_points[i*6+4] == 0.f &&
+//            m_points[i*6+5] == 0.f)
+//        if (m_DecVertices[i*6+3] == 0.f &&
+//            m_DecVertices[i*6+4] == 0.f &&
+//            m_DecVertices[i*6+5] == 0.f)
+//        {
+//            colors[i*3+1] = 1.f;
+//            colors[i*3+2] = 1.f;
+//            colors[i*3+0] = 1.f;
+//        }
+//        else
+//        {
+//            colors[i*3+1] = 0.5f + 0.5f * m_DecVertices[i*6+3];
+//            colors[i*3+2] = 0.5f + 0.5f * m_DecVertices[i*6+4];
+//            colors[i*3+0] = 0.5f + 0.5f * m_DecVertices[i*6+5];
+//        }
     }
+
+
+
+    updatePoints(true);
 }
 
 void ViewWindow::render()

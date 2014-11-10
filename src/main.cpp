@@ -166,6 +166,23 @@ void ViewWindow::loadASC(const std::string& filename, ASC& result)
     std::cout << "center is  " << mx << ", " << my << ", " << mz << std::endl;
 }
 
+void ViewWindow::saveASC(const std::string& filename, GLfloat& vertices) {
+    ofstream fichier(filename, ios::out | ios::trunc);  //déclaration du flux et ouverture du fichier
+
+    if(fichier)  // si l'ouverture a réussi
+    {
+        //écrire dans le fichier
+
+        fichier.close();  // on referme le fichier
+    }
+    else  // sinon
+        cerr << "Erreur à l'ouverture !" << endl;
+
+    return 0;
+}
+
+void ViewWindow::
+
 int main(int argc, char **argv)
 {
     QGuiApplication app(argc, argv);

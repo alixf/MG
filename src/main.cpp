@@ -60,9 +60,10 @@ ViewWindow::ViewWindow()
         indexes[i] = i;
 
      Octree octree(m_points, indexes, 10, 200, 10.f, QVector3D(mx, my, mz), 100);
-    std::cout << "nbLeaf : " << octree.getNbLeaf() << std::endl;
+     std::cout << "nbLeaf : " << octree.getNbLeaf() << std::endl;
      octree.decimation(m_DecIndexes, m_DecVertices, 0);
 
+     saveASC("figDecimee.asc", vertices);//m_DecVertices, octree.getNbLeaf());
 
     //m_DecIndexes.resize(100);
     //m_DecVertices.reserve(100);
@@ -166,12 +167,20 @@ void ViewWindow::loadASC(const std::string& filename, ASC& result)
     std::cout << "center is  " << mx << ", " << my << ", " << mz << std::endl;
 }
 
-void ViewWindow::saveASC(const std::string& filename, GLfloat& vertices) {
-    ofstream fichier(filename, ios::out | ios::trunc);  //déclaration du flux et ouverture du fichier
+void ViewWindow::saveASC(const std::string& filename, std::vector<float> vertices) {
+
+    ofstream fichier(filename.c_str(), ios::out | ios::trunc);  //déclaration du flux et ouverture du fichier
 
     if(fichier)  // si l'ouverture a réussi
     {
         //écrire dans le fichier
+        for (int i = 0; i < vertices.size() ; ++i) {
+
+            fichier << vertices[i] << " ";
+
+            if (i % 6 == 0)
+                fichier << endl;
+        }
 
         fichier.close();  // on referme le fichier
     }
@@ -180,8 +189,6 @@ void ViewWindow::saveASC(const std::string& filename, GLfloat& vertices) {
 
     return 0;
 }
-
-void ViewWindow::
 
 int main(int argc, char **argv)
 {

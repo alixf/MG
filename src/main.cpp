@@ -24,6 +24,7 @@ public:
 private:
     GLuint loadShader(GLenum type, const char *source);
     void loadASC(const std::string& filename, ASC& result);
+    void saveASC(const std::string& filename, std::vector<float> vertices);
     void wheelEvent ( QWheelEvent * event );
 
     GLuint m_posAttr;
@@ -51,33 +52,33 @@ ViewWindow::ViewWindow()
     , mz(0.f)
 
 {
-//    loadASC("data/Grp1-2014_Simplified.asc", m_points);
-    loadASC("sphere.asc", m_points);
+    loadASC("Grp1-2014_Simplified.asc", m_points);
+//    loadASC("sphere.asc", m_points);
 
+    m_DecVertices.reserve(10);
     //std::vector<int> indexes;
     indexes.resize(m_points.size()/6);
     for(unsigned int i = 0; i < indexes.size(); ++i)
         indexes[i] = i;
 
-     Octree octree(m_points, indexes, 10, 200, 10.f, QVector3D(mx, my, mz), 100);
-     std::cout << "nbLeaf : " << octree.getNbLeaf() << std::endl;
+     //Octree octree(m_points, indexes, 10, 200, 10.f, QVector3D(mx, my, mz), 200);
+    Octree octree(m_points, indexes, 10, 100, 500.f, QVector3D(mx, my, mz), 1000000);
+     std::cout << "nbLeaf : " << Octree::getNbLeaf() << std::endl;
      octree.decimation(m_DecIndexes, m_DecVertices, 0);
 
-     saveASC("figDecimee.asc", vertices);//m_DecVertices, octree.getNbLeaf());
+     saveASC(std::string("figDecimee.asc"), m_DecVertices);
 
-    //m_DecIndexes.resize(100);
-    //m_DecVertices.reserve(100);
+    /* for(int i = 0; i < m_DecVertices.size(); ++i){
+            if(!(m_DecVertices[i] != m_DecVertices[i]))
+                std::cout << m_DecVertices[i] << " " << std::endl;
+     }*/
 
-    //std::vector<float> res = octree.getNbOf(QVector3D(m_points[6*57+0], m_points[6*57+1], m_points[6*57+2]), 10.f);
-
-    //for(unsigned int i = 0; i < res.size(); i += 6)
-    //    std::cout << "(" << res[i+0] << " ; " << res[i+1] << " ; " << res[i+2] << ")" << std::endl;
 }
 
 //Draw decimated tree or full tree
 void ViewWindow::updatePoints(bool drawDecVertices)
 {
-    float scaleFactor = 0.9f;
+    float scaleFactor = 0.8f;
     size_t decVertSize = m_DecIndexes.size();
     std::cout << "m_DecIndexes.size() = " << m_DecIndexes.size() << std::endl;
     size_t vertSize = m_points.size() / 6;
@@ -169,25 +170,24 @@ void ViewWindow::loadASC(const std::string& filename, ASC& result)
 
 void ViewWindow::saveASC(const std::string& filename, std::vector<float> vertices) {
 
-    ofstream fichier(filename.c_str(), ios::out | ios::trunc);  //déclaration du flux et ouverture du fichier
+    std::ofstream fichier(filename.c_str(), std::ios::out | std::ios::trunc);  //déclaration du flux et ouverture du fichier
 
     if(fichier)  // si l'ouverture a réussi
     {
         //écrire dans le fichier
-        for (int i = 0; i < vertices.size() ; ++i) {
+        for (int i = 0; i < vertices.size(); i+=6) {
+            if(!(vertices[i] != vertices[i])){
+                fichier << vertices[i] << " " << vertices[i+1] << " " << vertices[i+2] << " "
+                       << vertices[i+3] << " " << vertices[i+4] << " " << vertices[i+5] << " ";
+                fichier << std::endl;
+            }
 
-            fichier << vertices[i] << " ";
-
-            if (i % 6 == 0)
-                fichier << endl;
         }
 
         fichier.close();  // on referme le fichier
     }
     else  // sinon
-        cerr << "Erreur à l'ouverture !" << endl;
-
-    return 0;
+        std::cerr << "Erreur à l'ouverture !" << endl;
 }
 
 int main(int argc, char **argv)

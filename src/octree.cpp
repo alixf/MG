@@ -29,7 +29,7 @@ Octree::Octree(std::vector<float>& vertices, const std::vector<int>& indexes, un
 
     // Create children if needed
 
-    if ((m_indexes.size() > maxVertices && maxHeight > 0) && m_nbLeaf < maxLeaf)
+    if ((m_indexes.size() > maxVertices && maxHeight > 0) && (m_nbLeaf <= maxLeaf || maxLeaf == 0))
     {
 
         std::vector<QVector3D> childCenters = getCenters(center, halfSize / 2);

@@ -1,3 +1,9 @@
+/* TODO :
+ * Lire l'article
+ * 4 logiciels de reconstruction (asc -> obj)
+ * Commencer le rapport
+ */
+
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -7,25 +13,37 @@
 #include <QtGui/QScreen>
 #include <QtCore/qmath.h>
 #include <QWheelEvent>
+#include <QMouseEvent>
 
 #include "openglwindow.hpp"
 #include "octree.hpp"
+#include "ray.hpp"
 
 typedef std::vector<float> ASC;
+
+struct Camera
+{
+    QVector3D position;
+    QVector3D direction;
+    QVector3D right;
+    QVector3D up;
+};
 
 class ViewWindow : public OpenGLWindow
 {
 public:
     ViewWindow();
+    ~ViewWindow();
     void initialize();
     void render();
+    Ray rayFromCamera(int x, int y);
     void updatePoints(bool);
 
 private:
     GLuint loadShader(GLenum type, const char *source);
     void loadASC(const std::string& filename, ASC& result);
-    void saveASC(const std::string& filename, std::vector<float> vertices);
     void wheelEvent ( QWheelEvent * event );
+    void mouseMoveEvent ( QMouseEvent * event );
 
     GLuint m_posAttr;
     GLuint m_colAttr;
@@ -39,6 +57,10 @@ private:
     GLfloat* colors;
     float m_scale;
     float mx, my, mz;
+
+    Camera m_camera;
+    Octree* octree;
+    Ray m_ray;
     std::vector<int> m_DecIndexes;
     std::vector<float> m_DecVertices;
 };
@@ -46,33 +68,38 @@ private:
 ViewWindow::ViewWindow()
     : m_program(0)
     , m_frame(0)
-    , m_scale(10.f)
+    , m_scale(-0.5f)
     , mx(0.f)
     , my(0.f)
     , mz(0.f)
 
 {
-    loadASC("Grp1-2014_Simplified.asc", m_points);
-//    loadASC("sphere.asc", m_points);
+    loadASC("sphere.asc", m_points);
+    //loadASC("Grp1-2014_Simplified.asc", m_points);
 
-    m_DecVertices.reserve(10);
     //std::vector<int> indexes;
     indexes.resize(m_points.size()/6);
     for(unsigned int i = 0; i < indexes.size(); ++i)
         indexes[i] = i;
 
-     //Octree octree(m_points, indexes, 10, 200, 10.f, QVector3D(mx, my, mz), 200);
-    Octree octree(m_points, indexes, 10, 100, 500.f, QVector3D(mx, my, mz), 1000000);
-     std::cout << "nbLeaf : " << Octree::getNbLeaf() << std::endl;
-     octree.decimation(m_DecIndexes, m_DecVertices, 0);
+    Octree octree(m_points, indexes, 10, 200, 100.f, QVector3D(mx, my, mz), 0);
+    std::cout << "nbLeaf : " << octree.getNbLeaf() << std::endl;
+    octree.decimation(m_DecIndexes, m_DecVertices, 0);
 
-     saveASC(std::string("figDecimee.asc"), m_DecVertices);
+    m_camera.position.setZ(-10.f);
 
-    /* for(int i = 0; i < m_DecVertices.size(); ++i){
-            if(!(m_DecVertices[i] != m_DecVertices[i]))
-                std::cout << m_DecVertices[i] << " " << std::endl;
-     }*/
+    //m_DecIndexes.resize(100);
+    //m_DecVertices.reserve(100);
 
+    //std::vector<float> res = octree.getNbOf(QVector3D(m_points[6*57+0], m_points[6*57+1], m_points[6*57+2]), 10.f);
+
+    //for(unsigned int i = 0; i < res.size(); i += 6)
+    //    std::cout << "(" << res[i+0] << " ; " << res[i+1] << " ; " << res[i+2] << ")" << std::endl;
+}
+
+ViewWindow::~ViewWindow()
+{
+    delete octree;
 }
 
 //Draw decimated tree or full tree
@@ -88,9 +115,9 @@ void ViewWindow::updatePoints(bool drawDecVertices)
         for(; i < decVertSize; ++i)
         {
             //std::cout << "i : " << i << std::endl;
-            vertices[i*3+0] = m_DecVertices[i*6+0]*scaleFactor;
-            vertices[i*3+1] = m_DecVertices[i*6+1]*scaleFactor;
-            vertices[i*3+2] = m_DecVertices[i*6+2]*scaleFactor;
+            vertices[i*3+0] = m_DecVertices[i*6+0]*scaleFactor - mx;
+            vertices[i*3+1] = m_DecVertices[i*6+1]*scaleFactor - my;
+            vertices[i*3+2] = m_DecVertices[i*6+2]*scaleFactor - mz;
         }
         for(; i < pointsCount; ++i){
             vertices[i*3+0] = 0.f;
@@ -102,9 +129,9 @@ void ViewWindow::updatePoints(bool drawDecVertices)
     } else {
         pointsCount = m_points.size() / 6;
         for(unsigned int i = 0; i < pointsCount; ++i){
-            vertices[i*3+0] = m_points[i*6+0]*scaleFactor;
-            vertices[i*3+1] = m_points[i*6+1]*scaleFactor;
-            vertices[i*3+2] = m_points[i*6+2]*scaleFactor;
+            vertices[i*3+0] = m_points[i*6+0]*scaleFactor - mx;
+            vertices[i*3+1] = m_points[i*6+1]*scaleFactor - my;
+            vertices[i*3+2] = m_points[i*6+2]*scaleFactor - mz;
         }
     }
 }
@@ -168,28 +195,6 @@ void ViewWindow::loadASC(const std::string& filename, ASC& result)
     std::cout << "center is  " << mx << ", " << my << ", " << mz << std::endl;
 }
 
-void ViewWindow::saveASC(const std::string& filename, std::vector<float> vertices) {
-
-    std::ofstream fichier(filename.c_str(), std::ios::out | std::ios::trunc);  //déclaration du flux et ouverture du fichier
-
-    if(fichier)  // si l'ouverture a réussi
-    {
-        //écrire dans le fichier
-        for (int i = 0; i < vertices.size(); i+=6) {
-            if(!(vertices[i] != vertices[i])){
-                fichier << vertices[i] << " " << vertices[i+1] << " " << vertices[i+2] << " "
-                       << vertices[i+3] << " " << vertices[i+4] << " " << vertices[i+5] << " ";
-                fichier << std::endl;
-            }
-
-        }
-
-        fichier.close();  // on referme le fichier
-    }
-    else  // sinon
-        std::cerr << "Erreur à l'ouverture !" << endl;
-}
-
 int main(int argc, char **argv)
 {
     QGuiApplication app(argc, argv);
@@ -233,6 +238,10 @@ GLuint ViewWindow::loadShader(GLenum type, const char *source)
 
 void ViewWindow::initialize()
 {
+    m_camera.up = QVector3D(0.f, 1.f, 0.f);
+    m_camera.right = QVector3D(1.f, 0.f, 0.f);
+    m_camera.direction = QVector3D(0.f, 0.f, 1.f);
+
     m_program = new QOpenGLShaderProgram(this);
     m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource);
     m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShaderSource);
@@ -249,11 +258,11 @@ void ViewWindow::initialize()
 
     for(unsigned int i = 0; i < pointsCount; ++i)
     {
-        vertices[i*3+0] = m_points[i*6+0]*scaleFactor;
-        vertices[i*3+1] = m_points[i*6+1]*scaleFactor;
-        vertices[i*3+2] = m_points[i*6+2]*scaleFactor;
-
+        vertices[i*3+0] = m_points[i*6+0]*scaleFactor - mx;
+        vertices[i*3+1] = m_points[i*6+1]*scaleFactor - my;
+        vertices[i*3+2] = m_points[i*6+2]*scaleFactor - mz;
     }
+
     colors = new GLfloat[pointsCount*3];
     for(unsigned int i = 0; i < pointsCount; ++i)
     {
@@ -295,12 +304,9 @@ void ViewWindow::render()
 
     QMatrix4x4 matrix;
     matrix.perspective(60.0f, 4.0f/3.0f, 0.1f, 100.0f);
-
-    matrix.translate(0, 0, -m_scale);
-    matrix.rotate(100.0f * m_frame / screen()->refreshRate(), 0, 1, 0);
-    matrix.translate(-mx, -my, -mz);
-
-
+    matrix.translate(m_camera.position.x(), m_camera.position.y(), m_camera.position.z());
+    matrix.rotate(50.0f * m_frame / screen()->refreshRate(), 0, 1, 0);
+    //matrix.translate(-mx, -my, -mz);
 
     //matrix.scale(m_scale);
 
@@ -317,13 +323,53 @@ void ViewWindow::render()
     glDisableVertexAttribArray(1);
     glDisableVertexAttribArray(0);
 
+
     m_program->release();
+
+    glBegin(GL_LINES);
+    glColor3f(1.0, 0.0, 0.0);
+    glVertex3f(m_ray.origin.x(), m_ray.origin.y(), m_ray.origin.z());
+
+    glColor3f(0.0, 1.0, 1.0);
+    glVertex3f(m_ray.origin.x() + m_ray.direction.x() * 10,
+               m_ray.origin.y() + m_ray.direction.y() * 10,
+               m_ray.origin.z() + m_ray.direction.z() * 10);
+    glEnd();
+
+    glBegin(GL_LINES);
+    glColor3f(1.0, 0.0, 0.0);
+    glVertex3f(0,0,0);
+    glVertex3f(10,10,10);
+    glEnd();
 
     ++m_frame;
 
 }
 void ViewWindow::wheelEvent( QWheelEvent * event )
 {
-    m_scale += (event->delta()/120) * 0.1f;
-    std::cout << m_scale << std::endl;
+    float z = (event->delta()/120) * 0.1f;
+    m_camera.position.setZ(m_camera.position.z() + z);
+}
+
+void ViewWindow::mouseMoveEvent(QMouseEvent* event)
+{
+    m_ray = rayFromCamera(event->x(), this->height() - event->y());
+    //QVector3D point = octree->getFirstCollision(m_ray.origin, m_ray.direction, 1.f);
+    //std::cout << point.x() << " ; " << point.y() << " ; "<< point.z() << std::endl;
+}
+
+Ray ViewWindow::rayFromCamera(int x, int y)
+{
+    const float width = this->width();  // pixels across
+    const float height = this->height();  // pixels high
+    double nx = (x / width) - 0.5;
+    double ny = (y / height) - 0.5;
+
+    QVector3D image_point = nx * m_camera.right + ny * m_camera.up + m_camera.position + m_camera.direction;
+    QVector3D ray_direction = image_point - m_camera.position;
+
+    Ray result;
+    result.origin = m_camera.position;
+    result.direction = ray_direction;
+    return result;
 }

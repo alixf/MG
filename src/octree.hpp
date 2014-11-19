@@ -12,7 +12,7 @@ class Octree
 public :
     Octree(std::vector<float>& vertices, const std::vector<int>& indexes, unsigned int maxHeight, unsigned int maxVertices, float halfSize, const QVector3D& center, const unsigned int maxLeaf = 0);
     std::vector<float> getNbOf(const QVector3D &p, float distance) const;
-    QVector3D getFirstCollision(std::vector<float> vertices, const QVector3D &pos, const QVector3D &dir, float width) const;
+    QVector3D getFirstCollision(const QVector3D &pos, const QVector3D &dir, float width);
     void printOctree() const;
     void decimation(std::vector<int>& indexes, std::vector<float>& vertices, unsigned int);
     static unsigned int getNbLeaf() {return Octree::m_nbLeaf;}

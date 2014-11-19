@@ -19,4 +19,5 @@ SOURCES += src/main.cpp \
 
 HEADERS  += \
     src/openglwindow.hpp \
-    src/octree.hpp
+    src/octree.hpp \
+    src/Ray.hpp

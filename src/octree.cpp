@@ -29,7 +29,7 @@ Octree::Octree(std::vector<float>& vertices, const std::vector<int>& indexes, un
 
     // Create children if needed
 
-    if ((m_indexes.size() > maxVertices && maxHeight > 0) && (m_nbLeaf <= maxLeaf || maxLeaf == 0))
+    if ((m_indexes.size() > maxVertices && maxHeight > 0) && (m_nbLeaf < maxLeaf || maxLeaf == 0))
     {
 
         std::vector<QVector3D> childCenters = getCenters(center, halfSize / 2);
@@ -89,45 +89,48 @@ std::vector<float> Octree::getNbOf(const QVector3D &p, float distance) const
     return m_children[getChildIndex(p)]->getNbOf(p, distance);
 }
 
-QVector3D Octree::getFirstCollision(std::vector<float> vertices, const QVector3D &pos, const QVector3D &dir, float width) const{
-
-    if (m_children != NULL) {
-
+QVector3D Octree::getFirstCollision(const QVector3D &pos, const QVector3D &dir, float width)
+{
+    if (m_children != NULL)
+    {
         if (pos.x() < m_center.x() && pos.y() < m_center.y() && pos.z() < m_center.z())
-            m_children[0]->getFirstCollision(vertices, pos, dir, width);
+            m_children[0]->getFirstCollision(pos, dir, width);
         else if (pos.x() < m_center.x() && pos.y() < m_center.y() && pos.z() > m_center.z())
-            m_children[1]->getFirstCollision(vertices, pos, dir, width);
+            m_children[1]->getFirstCollision(pos, dir, width);
         else if (pos.x() < m_center.x() && pos.y() > m_center.y() && pos.z() < m_center.z())
-            m_children[2]->getFirstCollision(vertices, pos, dir, width);
+            m_children[2]->getFirstCollision(pos, dir, width);
         else if (pos.x() < m_center.x() && pos.y() > m_center.y() && pos.z() > m_center.z())
-            m_children[3]->getFirstCollision(vertices, pos, dir, width);
+            m_children[3]->getFirstCollision(pos, dir, width);
         else if (pos.x() > m_center.x() && pos.y() < m_center.y() && pos.z() < m_center.z())
-            m_children[4]->getFirstCollision(vertices, pos, dir, width);
+            m_children[4]->getFirstCollision(pos, dir, width);
         else if (pos.x() > m_center.x() && pos.y() < m_center.y() && pos.z() > m_center.z())
-            m_children[5]->getFirstCollision(vertices, pos, dir, width);
+            m_children[5]->getFirstCollision(pos, dir, width);
         else if (pos.x() > m_center.x() && pos.y() > m_center.y() && pos.z() < m_center.z())
-            m_children[6]->getFirstCollision(vertices, pos, dir, width);
+            m_children[6]->getFirstCollision(pos, dir, width);
         else
-            m_children[7]->getFirstCollision(vertices, pos, dir, width);
+            m_children[7]->getFirstCollision(pos, dir, width);
     }
-
-    else {
+    else
+    {
         std::vector<int> pointsInter;
 
-        for (size_t i = 0; i < m_indexes.size(); ++i) {
-            if (distancePointToRay(pos, dir, QVector3D(vertices[m_indexes[i]*3], vertices[m_indexes[i]*3 +1], vertices[m_indexes[i]*3 + 2]) ) < width)
+        for (size_t i = 0; i < m_indexes.size(); ++i)
+        {
+            if (distancePointToRay(pos, dir, QVector3D(m_vertices[m_indexes[i]*3], m_vertices[m_indexes[i]*3 +1], m_vertices[m_indexes[i]*3 + 2]) ) < width)
                 pointsInter.push_back(i);
         }
 
         float min = pointsInter[0];
         QVector3D pointDistMin;
 
-        for (size_t i = 1; i < pointsInter.size(); ++i) {
-            const QVector3D vec = QVector3D(vertices[pointsInter[i]*3], vertices[pointsInter[i]*3+1], vertices[pointsInter[i]*3+2]);
+        for (size_t i = 1; i < pointsInter.size(); ++i)
+        {
+            const QVector3D vec = QVector3D(m_vertices[pointsInter[i]*3], m_vertices[pointsInter[i]*3+1], m_vertices[pointsInter[i]*3+2]);
             float distance = distancePointToPoint(vec, pos);
-            if (distance < min) {
+            if (distance < min)
+            {
                 min = distance;
-                pointDistMin = QVector3D(vertices[pointsInter[i]], vertices[pointsInter[i]+ 1], vertices[pointsInter[i]+2]);
+                pointDistMin = QVector3D(m_vertices[pointsInter[i]], m_vertices[pointsInter[i]+ 1], m_vertices[pointsInter[i]+2]);
             }
         }
 

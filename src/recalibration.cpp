@@ -4,7 +4,7 @@
 
 void Recalibration::translate (std::vector<float>& vertices, const QVector3D &p) {
 
-    for (int i = 0; i < vertices.size(); i += 6) {
+    for (int i = 0; i < vertices.size(); i += 3) {
         vertices[i] += p[0];
         vertices[i+1] += p[1];
         vertices[i+2] += p[2];
@@ -19,7 +19,7 @@ void Recalibration::rotate (std::vector<float>& vertices, const QVector3D &angle
     Eigen::Quaternionf q = Eigen::Quaternionf(0, angle.x(), angle.y(), angle.z());
     Eigen::Quaternionf qInv = q.inverse();
 
-    for (int i = 0; i < vertices.size(); i += 6) {
+    for (int i = 0; i < vertices.size(); i += 3) {
 
         vec = Eigen::Vector4f(vertices[i], vertices[i+1], vertices[i+2], 0);
 

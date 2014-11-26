@@ -103,7 +103,6 @@ public:
         std::map<Vertex*, std::map<Vertex*, Edge*> > edgesMap;
 
         edges.reserve(64);
-
         unsigned int i = 0;
 
         for(std::string line; getline(file, line);)
@@ -126,7 +125,7 @@ public:
                 float x, y, z;
                 linestream >> x >> y >> z;
 
-                // Create vertex, Set coordinates of vertex
+                // Add vertex, Set coordinates of vertex
                 vertices.push_back(Vertex());
                 vertices.back().x = x;
                 vertices.back().y = y;

@@ -37,6 +37,7 @@ struct Face
 {
     std::vector<Vertex*> vertices;
     std::vector<Edge*> edges;
+
 };
 typedef struct Face Face;
 
@@ -91,7 +92,6 @@ public:
         std::map<Vertex*, std::map<Vertex*, Edge*> > edgesMap;
 
         edges.reserve(16384);
-        unsigned int i = 0;
 
         for(std::string line; getline(file, line);)
         {

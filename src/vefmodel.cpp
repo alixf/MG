@@ -21,6 +21,7 @@ VEFModel::getNeighBH(const Vertex* v)
     return NBH;
 }
 
+// TODO : Use one of the method described in poly
 void
 VEFModel::computeNormal(Vertex* v)
 {

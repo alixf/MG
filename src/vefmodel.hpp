@@ -44,6 +44,7 @@ typedef std::map<Vertex*, std::map<Vertex*, Edge*> > EdgeMap;
 
 class VEFModel
 {
+private:
 public:
     std::vector<Vertex> vertices;
     std::vector<Edge> edges;
@@ -59,6 +60,8 @@ public:
             return edgesMap[v2][v1];
 
 
+
+
         Edge e;
         e.v1 = v1;
         e.v2 = v2;
@@ -67,14 +70,6 @@ public:
         face->edges.push_back(&e);
         v1->edges.push_back(&(edges.back()));
         v2->edges.push_back(&(edges.back()));
-
-        /*edges.push_back(Edge()); Edge& edge = edges.back();
-        face->edges.push_back(&edge);
-        v1->edges.push_back(&edge);
-        v2->edges.push_back(&edge);
-        edge.faces.push_back(face);
-        edge.v1 = v1;
-        edge.v2 = v2;*/
 
         if(edgesMap.find(v1) == edgesMap.end())
             edgesMap.insert(std::pair<Vertex*, std::map<Vertex*, Edge*> >(v1, std::map<Vertex*, Edge*>()));
@@ -120,6 +115,7 @@ public:
 
                 // Add vertex, Set coordinates of vertex
                 vertices.push_back(Vertex());
+
                 vertices.back().x = x;
                 vertices.back().y = y;
                 vertices.back().z = z;

@@ -14,10 +14,12 @@
 //#include <QtCore/qmath.h>
 //#include <QWheelEvent>
 //#include <QMouseEvent>
+#include <ctime>
 
 //#include "openglwindow.hpp"
 //#include "octree.hpp"
 //#include "ray.hpp"
+#include "vefmodel.hpp"
 
 //typedef std::vector<float> ASC;
 

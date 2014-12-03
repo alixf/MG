@@ -37,6 +37,7 @@ struct Face
 {
     std::vector<Vertex*> vertices;
     std::vector<Edge*> edges;
+    float nx, ny, nz;
 };
 typedef struct Face Face;
 
@@ -59,9 +60,6 @@ public:
         if(edgesMap.find(v2) != edgesMap.end() && edgesMap[v2].find(v1) != edgesMap[v2].end())
             return edgesMap[v2][v1];
 
-
-
-
         Edge e;
         e.v1 = v1;
         e.v2 = v2;
@@ -71,9 +69,9 @@ public:
         v1->edges.push_back(&(edges.back()));
         v2->edges.push_back(&(edges.back()));
 
+
         if(edgesMap.find(v1) == edgesMap.end())
             edgesMap.insert(std::pair<Vertex*, std::map<Vertex*, Edge*> >(v1, std::map<Vertex*, Edge*>()));
-        //edgesMap[v1].insert(std::pair<Vertex*, Edge*>(v2, &edge));
         edgesMap[v1].insert(std::pair<Vertex*, Edge*>(v2, &(edges.back())));
 
         return &(edges.back());
@@ -91,7 +89,6 @@ public:
         std::map<Vertex*, std::map<Vertex*, Edge*> > edgesMap;
 
         edges.reserve(16384);
-        unsigned int i = 0;
 
         for(std::string line; getline(file, line);)
         {
@@ -144,6 +141,9 @@ public:
 
         file.close();
     }
+
+    std::vector<Vertex *> getNeighBH(const Vertex* v);
+    void computeNormal(Vertex *v);
 };
 
 #endif // VEFMODEL_HPP

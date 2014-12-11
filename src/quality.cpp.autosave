@@ -170,6 +170,12 @@ void Quality::extractContours (std::vector<Edge>& edges, std::vector<Edge>& f, s
     std::cout << f.size() << " bords; " << nonVariety.size() << "non variété." << std::endl;
 }
 
+void Quality::nbHole (std::vector<Edge>& e) {
+    
+    
+    
+}
+
 float Quality::distancePointToPoint(QVector3D &pos1, QVector3D &pos2){
     return sqrt((pos1.x() - pos2.x()) * (pos1.x() - pos2.x()) + (pos1.y() - pos2.y()) * (pos1.y() - pos2.y()) + (pos1.z() - pos2.z()) * (pos1.z() - pos2.z()));
 

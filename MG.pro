@@ -16,10 +16,12 @@ INCLUDEPATH += "/usr/include/x86_64-linux-gnu/qt5/"
 SOURCES += src/main.cpp \
     src/openglwindow.cpp \
     src/octree.cpp \
-    src/vefmodel.cpp
+    src/vefmodel.cpp \
+    src/quality.cpp
 
 HEADERS  += \
     src/openglwindow.hpp \
     src/octree.hpp \
     src/Ray.hpp \
-    src/vefmodel.hpp
+    src/vefmodel.hpp \
+    src/quality.hpp

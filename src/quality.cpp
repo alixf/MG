@@ -3,7 +3,7 @@
 #include "math.h"
 #include "quality.hpp"
 
-float Quality::AspectRatio1 (std::vector<Face>& faces) {
+float Quality::AspectRatio1(const std::vector<Face>& faces) {
 
     QVector3D p1;
     QVector3D p2;
@@ -32,17 +32,17 @@ float Quality::AspectRatio1 (std::vector<Face>& faces) {
             if (distp1p2 > distp1p3 && distp1p2 > distp2p3) {
                     distBase = distp1p2;
                     vecBase = vectorPointToPoint(p1, p2);
-                    distPoint = distancePointToRay(p1, vecBase, p3);
+                    distPoint = Quality::distancePointToRay(p1, vecBase, p3);
             }
             else if (distp1p3 > distp1p2 && distp1p3 > distp2p3){
                     distBase = distp1p3;
                     vecBase = vectorPointToPoint(p1, p3);
-                    distPoint = distancePointToRay(p3, vecBase, p2);
+                    distPoint = Quality::distancePointToRay(p3, vecBase, p2);
             }
             else {
                 distBase = distp1p3;
                 vecBase = vectorPointToPoint(p1, p3);
-                distPoint = distancePointToRay(p3, vecBase, p2);
+                distPoint = Quality::distancePointToRay(p3, vecBase, p2);
             }
 
 	    ratio += (distPoint / distBase);
@@ -54,7 +54,7 @@ float Quality::AspectRatio1 (std::vector<Face>& faces) {
     return ratio;
 }
 
-float Quality::AspectRatio2 (std::vector<Face>& faces) {
+float Quality::AspectRatio2(const std::vector<Face> &faces) {
 
     QVector3D p1;
     QVector3D p2;
@@ -94,7 +94,7 @@ float Quality::AspectRatio2 (std::vector<Face>& faces) {
     return ratio / faces.size();
 }
 
-float Quality::AspectRatio3 (std::vector<Face>& faces) {
+float Quality::AspectRatio3(const std::vector<Face> &faces)  {
 
     QVector3D p1;
     QVector3D p2;
@@ -129,7 +129,7 @@ float Quality::AspectRatio3 (std::vector<Face>& faces) {
     ratio = ratio / faces.size();
 }
 
-const float Quality::maximum(const float x, const float y, const float z) {
+float Quality::maximum(const float x, const float y, const float z) {
     float max = x;
     if (y > max) {
         max = y;
@@ -142,7 +142,7 @@ const float Quality::maximum(const float x, const float y, const float z) {
     return max;
 }
 
-const float Quality::minimum(const float x, const float y, const float z) {
+float Quality::minimum(const float x, const float y, const float z) {
     float min = x;
     if (y < min) {
         min = y;
@@ -155,7 +155,7 @@ const float Quality::minimum(const float x, const float y, const float z) {
     return min;
 }
 
-void Quality::extractContours (std::vector<Edge>& edges, std::vector<Edge>& f, std::vector<Edge>& nonVariety) {
+void Quality::extractContours (const std::vector<Edge> &edges, std::vector<Edge>& f, std::vector<Edge>& nonVariety) {
 
     for (unsigned int i = 0; i < edges.size(); ++i) {
 
@@ -170,17 +170,17 @@ void Quality::extractContours (std::vector<Edge>& edges, std::vector<Edge>& f, s
     std::cout << f.size() << " bords; " << nonVariety.size() << "non variété." << std::endl;
 }
 
-float Quality::distancePointToPoint(QVector3D &pos1, QVector3D &pos2){
+float Quality::distancePointToPoint(const QVector3D &pos1, const QVector3D &pos2){
     return sqrt((pos1.x() - pos2.x()) * (pos1.x() - pos2.x()) + (pos1.y() - pos2.y()) * (pos1.y() - pos2.y()) + (pos1.z() - pos2.z()) * (pos1.z() - pos2.z()));
 
 }
 
-QVector3D Quality::vectorPointToPoint(QVector3D &p1, QVector3D &p2) {
+QVector3D Quality::vectorPointToPoint(const QVector3D &p1, const QVector3D &p2)  {
 
     return QVector3D(p2.x() - p1.x(), p2.y() - p1.y(), p2.z() - p1.z());
 }
 
-float Quality::distancePointToRay(QVector3D& origin, QVector3D& dir, QVector3D& point) {
+float Quality::distancePointToRay(const QVector3D& origin, const QVector3D& dir, const QVector3D& point)  {
     QVector3D dirToPoint = QVector3D(point.x() - origin.x(), point.y() - origin.y(), point.z() - origin.z());
 
     float scalarP = dir.x() * dirToPoint.x() +  dir.y() * dirToPoint.y() + dir.z() * dirToPoint.z();
@@ -189,5 +189,5 @@ float Quality::distancePointToRay(QVector3D& origin, QVector3D& dir, QVector3D& 
 
     float angle =  acos(scalarP / norm);
 
-    return sin(angle) * distancePointToPoint(origin, point);
+    return sin(angle) * Quality::distancePointToPoint(origin, point);
 }

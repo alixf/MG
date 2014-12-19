@@ -379,12 +379,15 @@
 #include <QMouseEvent>
 #include "vefmodel.hpp"
 #include "openglwindow.hpp"
+#include <QGLFormat>
+#include <QOpenGLVertexArrayObject>
+#include <QOpenGLBuffer>
 
 class ViewWindow : public OpenGLWindow
 {
 public:
-    ViewWindow(){}
-    ~ViewWindow(){}
+    ViewWindow() : m_VertexBuffer(QOpenGLBuffer::VertexBuffer){}
+    ~ViewWindow(){delete m_Data;}
     void initialize();
     void render();
 
@@ -397,6 +400,10 @@ private:
         return shader;
     }
 
+    void mouseMoveEvent(QMouseEvent *eventMove);
+    void mousePressEvent(QMouseEvent *eventPress);
+    void mouseReleaseEvent(QMouseEvent *releaseEvent);
+
     static const std::string vertexShaderSource;
     static const std::string fragmentShaderSource;
 
@@ -404,101 +411,159 @@ private:
     GLuint m_posAttr;
     GLuint m_colAttr;
     GLuint m_matrixUniform;
-    float** data;
+    QMatrix4x4 m_MVPMatrix;
+
+    struct float6{
+        float x,y,z;
+        float r,g,b;
+    };
+
+    float6* m_Data;
 
     QOpenGLShaderProgram *m_program;
     int m_frame;
 
+    QOpenGLVertexArrayObject m_VAO;
+    GLuint m_VertexBuffer;
     GLuint vbo;
+
+    QPoint m_LastPos;
+    QVector3D m_lookAt;
+    bool m_Rotate;
+    bool m_UpdateRender;
+    float m_Angle;
 };
+void ViewWindow::mouseReleaseEvent(QMouseEvent *releaseEvent)
+{
+    if(releaseEvent->button() == Qt::LeftButton){
+        m_Rotate = false;
+        m_UpdateRender = false;
+    }
+}
+
+void ViewWindow::mouseMoveEvent(QMouseEvent *eventMove)
+{
+    if(m_Rotate){
+        m_Angle += 0.01;
+        m_MVPMatrix.rotate(QQuaternion::fromAxisAndAngle(QVector3D(eventMove->pos().x() - m_LastPos.x(), eventMove->pos().y() - m_LastPos.y(), 0.f), m_Angle));
+        m_LastPos = eventMove->pos();
+        m_UpdateRender = true;
+    }
+}
+
+void ViewWindow::mousePressEvent(QMouseEvent *eventPress)
+{
+    if(eventPress->button() == Qt::LeftButton){
+        m_Rotate = true;
+    }
+    m_LastPos = eventPress->pos();
+}
 
 void ViewWindow::initialize()
 {
+    m_Angle = 0.f;
+    srand(time(NULL));
+    m_UpdateRender = true;
     mesh.load("FantomeLite.obj");
-    data = new float*[mesh.faces.size()*3];
+    m_Data = new float6[mesh.faces.size()*3];
+
     for(unsigned int i = 0; i < mesh.faces.size(); ++i)
     {
         for(int v = 0; v < 3; v++)
         {
-            data[i*3+v] = new float[3];
-            data[i*3+v][0] = mesh.faces[i].vertices[v]->x;
-            data[i*3+v][1] = mesh.faces[i].vertices[v]->y;
-            data[i*3+v][2] = mesh.faces[i].vertices[v]->z;
+            m_Data[i*3+v].x = mesh.faces[i].vertices[v]->x;
+            m_Data[i*3+v].y = mesh.faces[i].vertices[v]->y;
+            m_Data[i*3+v].z = mesh.faces[i].vertices[v]->z;
+            m_Data[i*3+v].r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+            m_Data[i*3+v].g = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+            m_Data[i*3+v].b = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
         }
     }
 
-    const unsigned int shaderAttribute = 0;
-
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
-    glVertexAttribPointer(shaderAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(shaderAttribute);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glGenBuffers(1, &m_VertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, m_VertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float6) * 3 * mesh.faces.size(), m_Data, GL_STATIC_DRAW);
 
     m_program = new QOpenGLShaderProgram(this);
     m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource.c_str());
     m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShaderSource.c_str());
     m_program->link();
+
     m_posAttr = m_program->attributeLocation("posAttr");
     m_colAttr = m_program->attributeLocation("colAttr");
     m_matrixUniform = m_program->uniformLocation("matrix");
+
+
+    m_lookAt = QVector3D(20.f, 200.f, 30.f);
+    m_MVPMatrix.perspective(60.0f, 4.0f/3.0f, 0.1f, 1000.0f);
+    m_MVPMatrix.lookAt(m_lookAt, QVector3D(0.f,0.f,0.f), QVector3D(0.f,1.f,0.f));
+    m_MVPMatrix.rotate(QQuaternion::fromAxisAndAngle(QVector3D(1,0,0), 45.f));
 }
 
 
 const std::string ViewWindow::vertexShaderSource =
-    "attribute highp vec4 posAttr; \
-    attribute lowp vec4 colAttr; \
-    varying lowp vec4 col; \
-    uniform highp mat4 matrix; \
-    void main() { \
-       col = colAttr; \
-       gl_Position = matrix * posAttr; \
+    "#version 330\n \
+    in vec3 posAttr;\n \
+    in vec3 colAttr;\n \
+    out vec3 col;\n \
+    uniform mat4 matrix;\n \
+    void main() { \n\
+       col = colAttr;\n \
+       gl_Position = matrix * vec4(posAttr, 1);\n \
     }";
 
 const std::string ViewWindow::fragmentShaderSource =
-    "varying lowp vec4 col; \
-    void main() { \
-       gl_FragColor = col; \
+    "#version 330\n \
+    in vec3 col;\n \
+    out vec4 color;\n \
+    void main() { \n\
+        color = vec4(col,1);\n \
     }";
 
 void ViewWindow::render()
 {
-    const qreal retinaScale = devicePixelRatio();
-    glViewport(0, 0, width() * retinaScale, height() * retinaScale);
+    if(m_UpdateRender){
+        const qreal retinaScale = devicePixelRatio();
+        glViewport(0, 0, width() * retinaScale, height() * retinaScale);
 
-    glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    m_program->bind();
+        m_program->bind();
 
-    QMatrix4x4 matrix;
-    matrix.perspective(60.0f, 4.0f/3.0f, 0.1f, 100.0f);
-    //matrix.translate(m_camera.position.x(), m_camera.position.y(), m_camera.position.z());
-    //matrix.rotate(50.0f * m_frame / screen()->refreshRate(), 0, 1, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, m_VertexBuffer);
+        m_program->enableAttributeArray("posAttr");
+        quintptr offset = 0;
+        glVertexAttribPointer(m_posAttr, 3, GL_FLOAT, GL_FALSE, sizeof(float6), (const void*)offset);
+        m_program->enableAttributeArray("colAttr");
+        offset += sizeof(float)*3;
+        glVertexAttribPointer(m_colAttr, 3, GL_FLOAT, GL_FALSE, sizeof(float6), (const void*)offset);
+        m_program->setUniformValue(m_matrixUniform, m_MVPMatrix);
 
-    m_program->setUniformValue(m_matrixUniform, matrix);
+        glDrawArrays(GL_TRIANGLES, 0, mesh.faces.size()*3);
 
-    //glVertexAttribPointer(m_posAttr, 3, GL_FLOAT, GL_FALSE, 0, vertices);
-    //glVertexAttribPointer(m_colAttr, 3, GL_FLOAT, GL_FALSE, 0, colors);
+        m_program->disableAttributeArray("colAttr");
+        m_program->disableAttributeArray("posAttr");
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    //glEnableVertexAttribArray(0);
-    //glEnableVertexAttribArray(1);
+        m_program->release();
+        //m_UpdateRender = false;
+    }
 
-    glDrawArrays(GL_TRIANGLES, 0, mesh.faces.size()*3);
 
-    //glDisableVertexAttribArray(1);
-    //glDisableVertexAttribArray(0);
-
-    m_program->release();
     ++m_frame;
 }
 int main(int argc, char **argv)
 {
     QGuiApplication app(argc, argv);
+    QSurfaceFormat glFormat;
+    glFormat.setVersion( 3, 3 );
+    glFormat.setSamples(16);
+
     QSurfaceFormat format;
     format.setSamples(16);
+
     ViewWindow window;
-    window.setFormat(format);
+    window.setFormat(glFormat);
     window.resize(640, 480);
     window.show();
     window.setAnimating(true);

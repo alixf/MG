@@ -449,8 +449,9 @@ void ViewWindow::mouseReleaseEvent(QMouseEvent *releaseEvent)
 void ViewWindow::mouseMoveEvent(QMouseEvent *eventMove)
 {
     if(m_Rotate){
-        m_Angle += 0.01;
-        m_MVPMatrix.rotate(QQuaternion::fromAxisAndAngle(QVector3D(eventMove->pos().x() - m_LastPos.x(), eventMove->pos().y() - m_LastPos.y(), 0.f), m_Angle));
+        m_Angle += 0.05;
+        if(m_Angle > 360.f) m_Angle = 0.f;
+        m_MVPMatrix.rotate(QQuaternion::fromAxisAndAngle(QVector3D(-(eventMove->pos().x() - m_LastPos.x()), eventMove->pos().y() - m_LastPos.y(), 0.f), m_Angle));
         m_LastPos = eventMove->pos();
         m_UpdateRender = true;
     }
@@ -468,12 +469,10 @@ void ViewWindow::wheelEvent(QWheelEvent *event)
     const int degrees = event->delta() / 8;
     const int steps = degrees / 15;
 
-    if(steps > 0) m_ZoomFactor += 0.1f;
-    else m_ZoomFactor -= 0.1f;
+    if(steps > 0) m_ZoomFactor += 0.3f;
+    else m_ZoomFactor -= 0.3f;
 
     m_UpdateRender = true;
-
-    //m_ZoomFactor += static_cast<float>(event->delta() / 120);
 }
 
 void ViewWindow::initialize()
@@ -484,8 +483,12 @@ void ViewWindow::initialize()
     m_Angle = 0.f;
     srand(time(NULL));
     m_UpdateRender = true;
-    mesh.load("FantomeLite.obj");
+    mesh.load("bun_zipper.obj");
     m_Data = new float6[mesh.faces.size()*3];
+
+    std::vector<Edge*> f;
+    std::vector<Edge> nv;
+    Quality::extractContours(mesh.edges,f,nv);
 
     for(unsigned int i = 0; i < mesh.faces.size(); ++i)
     {
@@ -494,14 +497,16 @@ void ViewWindow::initialize()
             m_Data[i*3+v].x = mesh.faces[i].vertices[v]->x;
             m_Data[i*3+v].y = mesh.faces[i].vertices[v]->y;
             m_Data[i*3+v].z = mesh.faces[i].vertices[v]->z;
-            m_Data[i*3+v].r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-            m_Data[i*3+v].g = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-            m_Data[i*3+v].b = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+            m_Data[i*3+v].r = mesh.faces[i].vertices[v]->r;
+            m_Data[i*3+v].g = mesh.faces[i].vertices[v]->g;
+            m_Data[i*3+v].b = mesh.faces[i].vertices[v]->b;
         }
     }
 
-    float ar = Quality::AspectRatio1(mesh.faces);
+    float ar = Quality::AspectRatio2(mesh.faces);
     std::cout << "Aspect ratio : " << ar << std::endl;
+
+    //Quality::nbHole(f);
 
     glGenBuffers(1, &m_VertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, m_VertexBuffer);
@@ -518,7 +523,7 @@ void ViewWindow::initialize()
     m_zoomUniform = m_program->uniformLocation("zoomFactor");
 
 
-    m_lookAt = QVector3D(20.f, 200.f, 30.f);
+    m_lookAt = QVector3D(0.1f, 0.2f, 0.2f);
     m_MVPMatrix.perspective(60.0f, 4.0f/3.0f, 0.1f, 1000.0f);
     m_MVPMatrix.lookAt(m_lookAt, QVector3D(0.f,0.f,0.f), QVector3D(0.f,1.f,0.f));
     m_MVPMatrix.rotate(QQuaternion::fromAxisAndAngle(QVector3D(1,0,0), 45.f));

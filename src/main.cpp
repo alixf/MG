@@ -379,6 +379,7 @@
 #include <QMouseEvent>
 #include "vefmodel.hpp"
 #include "openglwindow.hpp"
+#include "quality.hpp"
 #include <QGLFormat>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLBuffer>
@@ -403,6 +404,7 @@ private:
     void mouseMoveEvent(QMouseEvent *eventMove);
     void mousePressEvent(QMouseEvent *eventPress);
     void mouseReleaseEvent(QMouseEvent *releaseEvent);
+    void wheelEvent(QWheelEvent *event);
 
     static const std::string vertexShaderSource;
     static const std::string fragmentShaderSource;
@@ -411,6 +413,7 @@ private:
     GLuint m_posAttr;
     GLuint m_colAttr;
     GLuint m_matrixUniform;
+    GLuint m_zoomUniform;
     QMatrix4x4 m_MVPMatrix;
 
     struct float6{
@@ -432,6 +435,8 @@ private:
     bool m_Rotate;
     bool m_UpdateRender;
     float m_Angle;
+    float m_ZoomFactor;
+
 };
 void ViewWindow::mouseReleaseEvent(QMouseEvent *releaseEvent)
 {
@@ -458,9 +463,24 @@ void ViewWindow::mousePressEvent(QMouseEvent *eventPress)
     }
     m_LastPos = eventPress->pos();
 }
+void ViewWindow::wheelEvent(QWheelEvent *event)
+{
+    const int degrees = event->delta() / 8;
+    const int steps = degrees / 15;
+
+    if(steps > 0) m_ZoomFactor += 0.1f;
+    else m_ZoomFactor -= 0.1f;
+
+    m_UpdateRender = true;
+
+    //m_ZoomFactor += static_cast<float>(event->delta() / 120);
+}
 
 void ViewWindow::initialize()
 {
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+
     m_Angle = 0.f;
     srand(time(NULL));
     m_UpdateRender = true;
@@ -480,6 +500,9 @@ void ViewWindow::initialize()
         }
     }
 
+    float ar = Quality::AspectRatio1(mesh.faces);
+    std::cout << "Aspect ratio : " << ar << std::endl;
+
     glGenBuffers(1, &m_VertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, m_VertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float6) * 3 * mesh.faces.size(), m_Data, GL_STATIC_DRAW);
@@ -492,12 +515,15 @@ void ViewWindow::initialize()
     m_posAttr = m_program->attributeLocation("posAttr");
     m_colAttr = m_program->attributeLocation("colAttr");
     m_matrixUniform = m_program->uniformLocation("matrix");
+    m_zoomUniform = m_program->uniformLocation("zoomFactor");
 
 
     m_lookAt = QVector3D(20.f, 200.f, 30.f);
     m_MVPMatrix.perspective(60.0f, 4.0f/3.0f, 0.1f, 1000.0f);
     m_MVPMatrix.lookAt(m_lookAt, QVector3D(0.f,0.f,0.f), QVector3D(0.f,1.f,0.f));
     m_MVPMatrix.rotate(QQuaternion::fromAxisAndAngle(QVector3D(1,0,0), 45.f));
+
+    m_ZoomFactor = 1.f;
 }
 
 
@@ -505,11 +531,12 @@ const std::string ViewWindow::vertexShaderSource =
     "#version 330\n \
     in vec3 posAttr;\n \
     in vec3 colAttr;\n \
+    uniform float zoomFactor;\n\
     out vec3 col;\n \
     uniform mat4 matrix;\n \
     void main() { \n\
        col = colAttr;\n \
-       gl_Position = matrix * vec4(posAttr, 1);\n \
+       gl_Position = matrix * vec4(posAttr*zoomFactor, 1);\n \
     }";
 
 const std::string ViewWindow::fragmentShaderSource =
@@ -538,7 +565,7 @@ void ViewWindow::render()
         offset += sizeof(float)*3;
         glVertexAttribPointer(m_colAttr, 3, GL_FLOAT, GL_FALSE, sizeof(float6), (const void*)offset);
         m_program->setUniformValue(m_matrixUniform, m_MVPMatrix);
-
+        m_program->setUniformValue(m_zoomUniform, m_ZoomFactor);
         glDrawArrays(GL_TRIANGLES, 0, mesh.faces.size()*3);
 
         m_program->disableAttributeArray("colAttr");

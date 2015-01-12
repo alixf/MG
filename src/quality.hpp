@@ -8,9 +8,11 @@
 class Quality
 {
 public :
-    static float AspectRatio1 (const std::vector<Face>& faces);
-    static float AspectRatio2 (const std::vector<Face>& faces);
-    static float AspectRatio3 (const std::vector<Face>& faces) ;
+    static float getAspectRatio1 (const std::vector<Face>& faces, float &ratioMean, float &ratioSD, float &ratioMin, float &ratioMax);
+    static float getAspectRatio2 (const std::vector<Face>& faces, float &ratioMean, float &ratioSD, float &ratioMin, float &ratioMax);
+    static float getAspectRatio3 (const std::vector<Face>& faces, float &ratioMean, float &ratioSD, float &ratioMin, float &ratioMax);
+    static float getDegree(const std::vector<Vertex*> &vertices, float& degreeMean, float& degreeSD, float& degreeMin, float& degreeMax);
+
     static void contours (std::vector<Edge>& edges, std::vector<Edge>& f, std::vector<Edge>& nonVariety);
     static float distancePointToPoint(const QVector3D &pos1, const QVector3D &pos2);
     static QVector3D vectorPointToPoint(const QVector3D &p1, const QVector3D &p2);

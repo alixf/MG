@@ -9,6 +9,7 @@
 #include "openglwindow.hpp"
 #include "quality.hpp"
 #include <ctime>
+#include <iomanip>
 #include <QGLFormat>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLBuffer>
@@ -139,13 +140,23 @@ void ViewWindow::initialize()
         }
     }
 
-    float ar1 = Quality::AspectRatio1(mesh.faces);
-    float ar2 = Quality::AspectRatio2(mesh.faces);
-    float ar3 = Quality::AspectRatio3(mesh.faces);
-    std::cout << "Aspect ratio 1 : " << ar1 << std::endl;
-    std::cout << "Aspect ratio 2 : " << ar2 << std::endl;
-    std::cout << "Aspect ratio 3 : " << ar3 << std::endl;
+    // Display some metric : various aspect ratios and degree
+    float metricMean = 0.0, metricSD = 0.0, metricMin = 0.0, metricMax = 0.0;
+    int fl = 10;
+    std::cout.precision(4);
+    std::cout.setf(std::ios::fixed, std:: ios::floatfield);
 
+    std::cout << std::setw(fl) << "Metric" << " | " << std::setw(fl) << "Mean" << " | " << std::setw(fl) << "SD" << " | " << std::setw(fl) << "Min" << " | " << std::setw(fl) << "Max" << std::endl;
+    Quality::getAspectRatio1(mesh.faces, metricMean, metricSD, metricMin, metricMax);
+    std::cout << std::setw(fl) << "AR1" << " | " << std::setw(fl) << metricMean << " | " << std::setw(fl) << metricSD << " | " << std::setw(fl) << metricMin << " | " << std::setw(fl) << metricMax << std::endl;
+    Quality::getAspectRatio2(mesh.faces, metricMean, metricSD, metricMin, metricMax);
+    std::cout << std::setw(fl) << "AR2" << " | " << std::setw(fl) << metricMean << " | " << std::setw(fl) << metricSD << " | " << std::setw(fl) << metricMin << " | " << std::setw(fl) << metricMax << std::endl;
+    Quality::getAspectRatio3(mesh.faces, metricMean, metricSD, metricMin, metricMax);
+    std::cout << std::setw(fl) << "AR3" << " | " << std::setw(fl) << metricMean << " | " << std::setw(fl) << metricSD << " | " << std::setw(fl) << metricMin << " | " << std::setw(fl) << metricMax << std::endl;
+    Quality::getDegree(mesh.vertices, metricMean, metricSD, metricMin, metricMax);
+    std::cout << std::setw(fl) << "Degree" << " | " << std::setw(fl) << metricMean << " | " << std::setw(fl) << metricSD << " | " << std::setw(fl) << metricMin << " | " << std::setw(fl) << metricMax << std::endl;
+
+    // Display holes data
     int holes = Quality::nbHole(boundaries);
     std::cout << "Holes : " << holes << std::endl;
 

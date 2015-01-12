@@ -54,7 +54,6 @@ public:
 
     inline Edge* getOrAddEdge(EdgeMap& edgesMap, Vertex* v1, Vertex* v2)
     {
-
         if(edgesMap.find(v1) != edgesMap.end() && edgesMap[v1].find(v2) != edgesMap[v1].end()){
             return edgesMap[v1][v2];
         }
@@ -89,11 +88,9 @@ public:
 
         std::map<Vertex*, std::map<Vertex*, Edge*> > edgesMap;
 
-        edges.reserve(16384);
+        //edges.reserve(16384);
         for(std::string line; getline(file, line);)
         {
-            //std::cout << i++ << std::endl;
-
             if(line[0] == '#' || line.size() <= 0)
                 continue;
 
@@ -119,8 +116,23 @@ public:
             else if(type == "f")
             {
                 // Retrieves vertices
-                unsigned int vi1, vi2, vi3;
-                linestream >> vi1 >> vi2 >> vi3;
+                std::string part1,part2,part3;
+                unsigned int vi1 = 0, vi2 = 0, vi3 = 0;
+
+                linestream >> part1 >> part2 >> part3;
+
+                linestream.str(part1);
+                linestream.seekg(0);
+                linestream >> vi1;
+
+                linestream.str(part2);
+                linestream.seekg(0);
+                linestream >> vi2;
+
+                linestream.str(part3);
+                linestream.seekg(0);
+                linestream >> vi3;
+
                 Vertex* v1 = vertices[vi1-1];
                 Vertex* v2 = vertices[vi2-1];
                 Vertex* v3 = vertices[vi3-1];
@@ -133,6 +145,7 @@ public:
 
                 // Add edges
                 Edge *e1,*e2,*e3;
+
                 e1 = getOrAddEdge(edgesMap, v1, v2);
                 e2 = getOrAddEdge(edgesMap, v2, v3);
                 e3 = getOrAddEdge(edgesMap, v3, v1);

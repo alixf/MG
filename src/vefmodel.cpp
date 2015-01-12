@@ -12,7 +12,8 @@ VEFModel::getNeighBH(const Vertex* v)
     std::vector<Edge*>::const_iterator it = v->edges.begin();
     std::vector<Edge*>::const_iterator end = v->edges.end();
 
-    for(unsigned int i = 0; it != end; ++it, ++i){
+    for(unsigned int i = 0; it != end; ++it, ++i)
+    {
         if(v != (*it)->v1)
             NBH.push_back((*it)->v1);
         else

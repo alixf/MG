@@ -126,69 +126,64 @@ float Quality::AspectRatio3(const std::vector<Face> &faces)  {
     return ratio;
 }
 
-bool isInVector (std::vector<Edge*>& edges, Edge* e) {
-
-    for (unsigned int i = 0; i < edges.size(); ++i)
-        if (edges[i] == e)
-            return true;
-
-    return false;
-}
-
-Edge* getNextEdge (std::vector<Edge*> edges, Edge* edge, std::vector<Edge*>& edgesTraited) {
-
-     for (unsigned int i = 0; i < edges.size(); ++i) {
-         if (((edge->v2 == edges[i]->v1 || (edge->v2 == edges[i]->v2)) ||  (edge->v1 == edges[i]->v1 || (edge->v1 == edges[i]->v2))) && !(edge->v1 == edges[i]->v1 && (edge->v2 == edges[i]->v2)) && !isInVector(edgesTraited, edge))
-            return edges[i];
+Edge* getNextEdge (std::vector<Edge*> edges, Edge* edge, std::vector<Edge*>& edgesTraited)
+{
+     for (unsigned int i = 0; i < edges.size(); ++i)
+     {
+         if(std::find(edgesTraited.begin(), edgesTraited.end(), edge) == edgesTraited.end()) // If edge is not in the visited list
+         {
+             if(edge != edges[i])
+             {
+                 if (edge->v2 == edges[i]->v1 || edge->v2 == edges[i]->v2 || edge->v1 == edges[i]->v1 || edge->v1 == edges[i]->v2)
+                     return edges[i];
+             }
+         }
      }
 
      return NULL;
 }
 
-int Quality::nbHole(std::vector<Edge*>& edges) {
-
-    int cmp;
+int Quality::nbHole(std::vector<Edge*>& edges)
+{
+    int cmp = 0;
 
     std::vector<Edge*> e;
     Edge* nextEdge;
 
-    for (unsigned int i = 1; i < edges.size(); ++i) {
-
-        if (!isInVector(e, edges[i])) {
+    for (unsigned int i = 1; i < edges.size(); ++i)
+    {
+        if(std::find(e.begin(), e.end(), edges[i]) == e.end()) // If edge is not in the visited list
+        {
             nextEdge = getNextEdge(edges, edges[i], e);
 
-            while (nextEdge != NULL) {
+            while (nextEdge != NULL)
+            {
                 e.push_back(nextEdge);
-                nextEdge = getNextEdge(edges, edges[i], e);
+                nextEdge = getNextEdge(edges, nextEdge, e);
             }
 
             cmp++;
         }
     }
 
-    std::cout << "trous = " << cmp << std::endl;
     return cmp;
 }
 
+void Quality::extractContours (std::vector<Edge*>& edges, std::vector<Edge*>& f, std::vector<Edge>& nonVariety) {
 
-
-
-
-void Quality::extractContours (std::vector<Edge *> &edges, std::vector<Edge *> &f, std::vector<Edge>& nonVariety) {
-
-    for (unsigned int i = 0; i < edges.size(); ++i) {
-
-        if (edges[i]->faces.size() < 2) {
+    for (unsigned int i = 0; i < edges.size(); ++i)
+    {
+        if (edges[i]->faces.size() < 2)
+        {
             f.push_back(edges[i]);
             edges[i]->v1->r = 1.f;
             edges[i]->v1->g = edges[i]->v1->b = 0.f;
         }
-        else if (edges[i]->faces.size() > 2) {
+        else if (edges[i]->faces.size() > 2)
+        {
             nonVariety.push_back(*(edges[i]));
         }
     }
-
-    std::cout << f.size() << " bords; " << nonVariety.size() << " non variété." << std::endl;
 }
 
 float Quality::distancePointToPoint(const QVector3D &pos1, const QVector3D &pos2){

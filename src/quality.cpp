@@ -78,7 +78,7 @@ float Quality::getAspectRatio1(const std::vector<Face>& faces, float& ratioMean,
 float Quality::getAspectRatio2(const std::vector<Face> &faces, float& ratioMean, float& ratioSD, float& ratioMin, float& ratioMax)
 {
     QVector3D p1,p2,p3;
-    float distp1p2, distp1p3, distp2p3; //c
+    float distp1p2, distp1p3, distp2p3;
     float s;
 
     std::vector<float> ratios;
@@ -165,7 +165,7 @@ Edge* getNextEdge (std::vector<Edge*> edges, Edge* edge, std::vector<Edge*>& edg
 {
      for (unsigned int i = 0; i < edges.size(); ++i)
      {
-         if(std::find(edgesTraited.begin(), edgesTraited.end(), edge) == edgesTraited.end()) // If edge is not in the visited list
+         if(std::find(edgesTraited.begin(), edgesTraited.end(), edges[i]) == edgesTraited.end()) // If edge is not in the visited list
          {
              if(edge != edges[i])
              {
@@ -174,7 +174,6 @@ Edge* getNextEdge (std::vector<Edge*> edges, Edge* edge, std::vector<Edge*>& edg
              }
          }
      }
-
      return NULL;
 }
 

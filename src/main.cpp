@@ -8,19 +8,55 @@
 #include "vefmodel.hpp"
 #include "openglwindow.hpp"
 #include "quality.hpp"
+#include "octree.hpp"
+#include "Ray.hpp"
 #include <ctime>
 #include <iomanip>
 #include <QGLFormat>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLBuffer>
 
+typedef std::vector<float> ASC;
+
+struct Camera
+{
+    QVector3D position;
+    QVector3D direction;
+    QVector3D right;
+    QVector3D up;
+};
+
 class ViewWindow : public OpenGLWindow
 {
 public:
-    ViewWindow() : m_VertexBuffer(QOpenGLBuffer::VertexBuffer){}
+    ViewWindow() : m_VertexBuffer(QOpenGLBuffer::VertexBuffer)
+    {
+        loadASC("sphere.asc", m_points);
+        //loadASC("Grp1-2014_Simplified.asc", m_points);
+
+        //std::vector<int> indexes;
+        indexes.resize(m_points.size()/6);
+        for(unsigned int i = 0; i < indexes.size(); ++i)
+            indexes[i] = i;
+
+        Octree octree(m_points, indexes, 10, 200, 100.f, QVector3D(mx, my, mz), 0);
+        std::cout << "nbLeaf : " << octree.getNbLeaf() << std::endl;
+        octree.decimation(m_DecIndexes, m_DecVertices, 0);
+
+        m_camera.position.setZ(-10.f);
+
+        //m_DecIndexes.resize(100);
+        //m_DecVertices.reserve(100);
+
+        //std::vector<float> res = octree.getNbOf(QVector3D(m_points[6*57+0], m_points[6*57+1], m_points[6*57+2]), 10.f);
+
+        //for(unsigned int i = 0; i < res.size(); i += 6)
+        //    std::cout << "(" << res[i+0] << " ; " << res[i+1] << " ; " << res[i+2] << ")" << std::endl;
+    }
     ~ViewWindow(){delete m_Data;}
     void initialize();
     void render();
+    void updatePoints(bool drawDecVertices);
 
 private:
     GLuint loadShader(GLenum type, const char *source)
@@ -30,6 +66,8 @@ private:
         glCompileShader(shader);
         return shader;
     }
+
+    void loadASC(const std::string& filename, ASC& result);
 
     void mouseMoveEvent(QMouseEvent *eventMove);
     void mousePressEvent(QMouseEvent *eventPress);
@@ -67,10 +105,25 @@ private:
     float m_Angle;
     float m_ZoomFactor;
 
+    ASC m_points;
+    std::vector<int> indexes;
+    unsigned int pointsCount;
+    GLfloat* vertices;
+    GLfloat* colors;
+    float m_scale;
+    float mx, my, mz;
+
+    Camera m_camera;
+    Octree* octree;
+    Ray m_ray;
+    std::vector<int> m_DecIndexes;
+    std::vector<float> m_DecVertices;
+
 };
 void ViewWindow::mouseReleaseEvent(QMouseEvent *releaseEvent)
 {
-    if(releaseEvent->button() == Qt::LeftButton){
+    if(releaseEvent->button() == Qt::LeftButton)
+    {
         m_Rotate = false;
         m_UpdateRender = false;
     }
@@ -123,7 +176,7 @@ void ViewWindow::initialize()
 
     std::vector<Edge*> boundaries;
     std::vector<Edge> supManifold;
-    Quality::extractContours(mesh.edges, boundaries, supManifold);
+    Quality::extractBoudaries(mesh.edges, boundaries, supManifold);
 
     std::cout << boundaries.size() << " bords; " << supManifold.size() << " non 2Variétés." << std::endl;
 
@@ -157,7 +210,7 @@ void ViewWindow::initialize()
     std::cout << std::setw(fl) << "Degree" << " | " << std::setw(fl) << metricMean << " | " << std::setw(fl) << metricSD << " | " << std::setw(fl) << metricMin << " | " << std::setw(fl) << metricMax << std::endl;
 
     // Display holes data
-    int holes = Quality::nbHole(boundaries);
+    int holes = Quality::getHoleCount(boundaries);
     std::cout << "Holes : " << holes << std::endl;
 
     glGenBuffers(1, &m_VertexBuffer);
@@ -252,4 +305,96 @@ int main(int argc, char **argv)
     window.show();
     window.setAnimating(true);
     return app.exec();
+}
+
+void ViewWindow::updatePoints(bool drawDecVertices)
+{
+    float scaleFactor = 0.8f;
+    size_t decVertSize = m_DecIndexes.size();
+    std::cout << "m_DecIndexes.size() = " << m_DecIndexes.size() << std::endl;
+    size_t vertSize = m_points.size() / 6;
+
+    if(drawDecVertices){
+        unsigned int i = 0;
+        for(; i < decVertSize; ++i)
+        {
+            //std::cout << "i : " << i << std::endl;
+            vertices[i*3+0] = m_DecVertices[i*6+0]*scaleFactor - mx;
+            vertices[i*3+1] = m_DecVertices[i*6+1]*scaleFactor - my;
+            vertices[i*3+2] = m_DecVertices[i*6+2]*scaleFactor - mz;
+        }
+        for(; i < pointsCount; ++i){
+            vertices[i*3+0] = 0.f;
+            vertices[i*3+1] = 0.f;
+            vertices[i*3+2] = 0.f;
+        }
+        pointsCount = decVertSize;
+        std::cout << "Data updated according to the decimation" << std::endl;
+    } else {
+        pointsCount = m_points.size() / 6;
+        for(unsigned int i = 0; i < pointsCount; ++i){
+            vertices[i*3+0] = m_points[i*6+0]*scaleFactor - mx;
+            vertices[i*3+1] = m_points[i*6+1]*scaleFactor - my;
+            vertices[i*3+2] = m_points[i*6+2]*scaleFactor - mz;
+        }
+    }
+}
+
+void ViewWindow::loadASC(const std::string& filename, ASC& result)
+{
+    std::ifstream file(filename.c_str());
+    if( !file.is_open() ) std::cerr << "Error : cannot open file : " << filename << std::endl;
+
+    pointsCount = std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');
+    result.resize(pointsCount * 6);
+    file.seekg (0, file.beg);
+
+    unsigned int i = 0;
+    float progress = 0.f;
+
+    float x = 0.f, y = 0.f, z = 0.f;
+    float nx = 0.f, ny = 0.f, nz = 0.f;
+    std::istringstream linestream;
+
+    for(std::string line; getline(file, line);)
+    {
+        // Empty line and comments are ignored
+        if(line[0] == '#' || line.size() <= 0)
+            continue;
+
+        linestream.str(line);
+        linestream.seekg(0);
+
+        // Extract position
+        x = 0.f;
+        y = 0.f;
+        z = 0.f;
+        linestream >> x >> y >> z;
+        mx += x;
+        my += y;
+        mz += z;
+
+        // Extract normal
+        nx = 0.f;
+        ny = 0.f;
+        nz = 0.f;
+        //linestream >> nx >> ny >> nz;
+
+        // Fill the vertex and push it in the array
+        result[i*6+0] = x;  result[i*6+1] = y;  result[i*6+2] = z;
+        result[i*6+3] = nx; result[i*6+4] = ny; result[i*6+5] = nz;
+        ++i;
+
+        if((float) i / (float) pointsCount >= progress+0.1f)
+        {
+            progress += 0.1f;
+            std::cout << "loading ... " << (progress*100) << "%" << std::endl;
+        }
+
+    }
+    mx /= (float) pointsCount;
+    my /= (float) pointsCount;
+    mz /= (float) pointsCount;
+    std::cout << "loaded " << pointsCount << " vertices" << std::endl;
+    std::cout << "center is  " << mx << ", " << my << ", " << mz << std::endl;
 }

@@ -141,7 +141,7 @@ float Quality::getAspectRatio3(const std::vector<Face> &faces, float& ratioMean,
         }
         else
         {
-            std::cerr << "face sans 3 aretes" << std::endl;
+            std::cerr << "invalid face : more or less than 3 edges" << std::endl;
         }
     }
 
@@ -161,11 +161,11 @@ float Quality::getDegree(const std::vector<Vertex*> &vertices, float& degreeMean
     return degreeMean;
 }
 
-Edge* getNextEdge (std::vector<Edge*> edges, Edge* edge, std::vector<Edge*>& edgesTraited)
+Edge* getNextEdge (std::vector<Edge*> edges, Edge* edge, std::vector<Edge*>& edgesVisited)
 {
      for (unsigned int i = 0; i < edges.size(); ++i)
      {
-         if(std::find(edgesTraited.begin(), edgesTraited.end(), edges[i]) == edgesTraited.end()) // If edge is not in the visited list
+         if(std::find(edgesVisited.begin(), edgesVisited.end(), edges[i]) == edgesVisited.end()) // If edge is not in the visited list
          {
              if(edge != edges[i])
              {
@@ -177,7 +177,7 @@ Edge* getNextEdge (std::vector<Edge*> edges, Edge* edge, std::vector<Edge*>& edg
      return NULL;
 }
 
-int Quality::nbHole(std::vector<Edge*>& edges)
+int Quality::getHoleCount(std::vector<Edge*>& edges)
 {
     int cmp = 0;
 
@@ -203,34 +203,35 @@ int Quality::nbHole(std::vector<Edge*>& edges)
     return cmp;
 }
 
-void Quality::extractContours (std::vector<Edge*>& edges, std::vector<Edge*>& f, std::vector<Edge>& nonVariety) {
-
+void Quality::extractBoudaries (std::vector<Edge*>& edges, std::vector<Edge*>& boundaries, std::vector<Edge>& nonManifold)
+{
     for (unsigned int i = 0; i < edges.size(); ++i)
     {
         if (edges[i]->faces.size() < 2)
         {
-            f.push_back(edges[i]);
+            boundaries.push_back(edges[i]);
             edges[i]->v1->r = 1.f;
             edges[i]->v1->g = edges[i]->v1->b = 0.f;
         }
         else if (edges[i]->faces.size() > 2)
         {
-            nonVariety.push_back(*(edges[i]));
+            nonManifold.push_back(*(edges[i]));
         }
     }
 }
 
-float Quality::distancePointToPoint(const QVector3D &pos1, const QVector3D &pos2){
+float Quality::distancePointToPoint(const QVector3D &pos1, const QVector3D &pos2)
+{
     return sqrt((pos1.x() - pos2.x()) * (pos1.x() - pos2.x()) + (pos1.y() - pos2.y()) * (pos1.y() - pos2.y()) + (pos1.z() - pos2.z()) * (pos1.z() - pos2.z()));
-
 }
 
-QVector3D Quality::vectorPointToPoint(const QVector3D &p1, const QVector3D &p2)  {
-
+QVector3D Quality::vectorPointToPoint(const QVector3D &p1, const QVector3D &p2)
+{
     return QVector3D(p2.x() - p1.x(), p2.y() - p1.y(), p2.z() - p1.z());
 }
 
-float Quality::distancePointToRay(const QVector3D& origin, const QVector3D& dir, const QVector3D& point)  {
+float Quality::distancePointToRay(const QVector3D& origin, const QVector3D& dir, const QVector3D& point)
+{
     QVector3D dirToPoint = QVector3D(point.x() - origin.x(), point.y() - origin.y(), point.z() - origin.z());
 
     float scalarP = dir.x() * dirToPoint.x() +  dir.y() * dirToPoint.y() + dir.z() * dirToPoint.z();

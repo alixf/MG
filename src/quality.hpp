@@ -17,8 +17,8 @@ public :
     static float distancePointToPoint(const QVector3D &pos1, const QVector3D &pos2);
     static QVector3D vectorPointToPoint(const QVector3D &p1, const QVector3D &p2);
     static float distancePointToRay(const QVector3D& origin, const QVector3D& dir, const QVector3D& point);
-    static void extractContours (std::vector<Edge*>& edges, std::vector<Edge*>& f, std::vector<Edge>& nonVariety);
-    static int nbHole (std::vector<Edge *> &edges);
+    static void extractBoudaries (std::vector<Edge*>& edges, std::vector<Edge*>& f, std::vector<Edge>& nonVariety);
+    static int getHoleCount (std::vector<Edge *> &edges);
 
    /* static Quality* const getQualityObject() {
         if(!Quality::thisRef){

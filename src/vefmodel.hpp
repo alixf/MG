@@ -48,7 +48,7 @@ private:
 public:
     std::vector<Vertex*> vertices;
     std::vector<Edge*> edges;
-    std::vector<Face> faces;
+    std::vector<Face*> faces;
     VEFModel();
 
 
@@ -137,24 +137,27 @@ public:
                 Vertex* v2 = vertices[vi2-1];
                 Vertex* v3 = vertices[vi3-1];
                 // Create face
-                faces.push_back(Face()); Face& f = faces.back();
+                Face* f = new Face;
+                faces.push_back(f);
                 // Add vertices to edge
-                f.vertices.push_back(v1);
-                f.vertices.push_back(v2);
-                f.vertices.push_back(v3);
-
+                f->vertices.push_back(v1);
+                f->vertices.push_back(v2);
+                f->vertices.push_back(v3);
+                v1->faces.push_back(f);
+                v2->faces.push_back(f);
+                v1->faces.push_back(f);
                 // Add edges
                 Edge *e1,*e2,*e3;
 
                 e1 = getOrAddEdge(edgesMap, v1, v2);
                 e2 = getOrAddEdge(edgesMap, v2, v3);
                 e3 = getOrAddEdge(edgesMap, v3, v1);
-                f.edges.push_back(e1);
-                f.edges.push_back(e2);
-                f.edges.push_back(e3);
-                e1->faces.push_back(&f);
-                e2->faces.push_back(&f);
-                e3->faces.push_back(&f);
+                f->edges.push_back(e1);
+                f->edges.push_back(e2);
+                f->edges.push_back(e3);
+                e1->faces.push_back(f);
+                e2->faces.push_back(f);
+                e3->faces.push_back(f);
             }
         }
 

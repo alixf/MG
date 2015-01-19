@@ -82,7 +82,9 @@ private:
     GLuint m_colAttr;
     GLuint m_matrixUniform;
     GLuint m_zoomUniform;
+
     QMatrix4x4 m_MVPMatrix;
+
 
     struct float6{
         float x,y,z;
@@ -102,7 +104,8 @@ private:
     QVector3D m_lookAt;
     bool m_Rotate;
     bool m_UpdateRender;
-    float m_Angle;
+    float m_AngleX, m_AngleY;
+    float m_RotateSpeed;
     float m_ZoomFactor;
 
     ASC m_points;
@@ -132,9 +135,10 @@ void ViewWindow::mouseReleaseEvent(QMouseEvent *releaseEvent)
 void ViewWindow::mouseMoveEvent(QMouseEvent *eventMove)
 {
     if(m_Rotate){
-        m_Angle += 0.05;
-        if(m_Angle > 360.f) m_Angle = 0.f;
-        m_MVPMatrix.rotate(QQuaternion::fromAxisAndAngle(QVector3D(-(eventMove->pos().x() - m_LastPos.x()), eventMove->pos().y() - m_LastPos.y(), 0.f), m_Angle));
+        QVector2D vec( eventMove->pos().x() - m_LastPos.x(), eventMove->pos().y() - m_LastPos.y());
+
+        m_MVPMatrix.rotate(m_RotateSpeed * vec.x(), QVector3D(0.f, 1.f, 0.f));
+        m_MVPMatrix.rotate(m_RotateSpeed * vec.y(), QVector3D(1.f, 0.f, 0.f));
         m_LastPos = eventMove->pos();
         m_UpdateRender = true;
     }
@@ -144,6 +148,9 @@ void ViewWindow::mousePressEvent(QMouseEvent *eventPress)
 {
     if(eventPress->button() == Qt::LeftButton){
         m_Rotate = true;
+    }
+    if(eventPress->button() == Qt::RightButton){
+        m_RotateSpeed += 0.2f;
     }
     m_LastPos = eventPress->pos();
 }
@@ -163,10 +170,11 @@ void ViewWindow::initialize()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
-    m_Angle = 0.f;
+    m_AngleX = m_AngleY = 0.f;
+    m_RotateSpeed = 0.1f;
     srand(time(NULL));
     m_UpdateRender = true;
-    mesh.load("data/bun_zipper.obj");
+    mesh.load("data/cube.obj");
     std::cout << "Model loaded : " << std::endl;
     std::cout << mesh.vertices.size() << " vertices" << std::endl;
     std::cout << mesh.edges.size() << " edges" << std::endl;
@@ -184,12 +192,12 @@ void ViewWindow::initialize()
     {
         for(int v = 0; v < 3; v++)
         {
-            m_Data[i*3+v].x = mesh.faces[i].vertices[v]->x;
-            m_Data[i*3+v].y = mesh.faces[i].vertices[v]->y;
-            m_Data[i*3+v].z = mesh.faces[i].vertices[v]->z;
-            m_Data[i*3+v].r = mesh.faces[i].vertices[v]->r;
-            m_Data[i*3+v].g = mesh.faces[i].vertices[v]->g;
-            m_Data[i*3+v].b = mesh.faces[i].vertices[v]->b;
+            m_Data[i*3+v].x = mesh.faces[i]->vertices[v]->x;
+            m_Data[i*3+v].y = mesh.faces[i]->vertices[v]->y;
+            m_Data[i*3+v].z = mesh.faces[i]->vertices[v]->z;
+            m_Data[i*3+v].r = mesh.faces[i]->vertices[v]->r;
+            m_Data[i*3+v].g = mesh.faces[i]->vertices[v]->g;
+            m_Data[i*3+v].b = mesh.faces[i]->vertices[v]->b;
         }
     }
 
@@ -213,6 +221,16 @@ void ViewWindow::initialize()
     int holes = Quality::getHoleCount(boundaries);
     std::cout << "Holes : " << holes << std::endl;
 
+    Quality::normaleComputation(mesh.faces);
+    std::vector<Face*>::iterator beg = mesh.faces.begin();
+    std::vector<Face*>::iterator end = mesh.faces.end();
+    for(; beg != end; ++beg){
+        std::cout << "Normale x  : " << (*beg)->nx << " ; Normale y : " << (*beg)->ny << " ; Normale z : " << (*beg)->nz << std::endl;
+    }
+    std::cout << "Beginning" << std::endl;
+    Quality::MWRELR(mesh.vertices);
+    std::cout << "Done !" << std::endl;
+
     glGenBuffers(1, &m_VertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, m_VertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float6) * 3 * mesh.faces.size(), m_Data, GL_STATIC_DRAW);
@@ -228,7 +246,7 @@ void ViewWindow::initialize()
     m_zoomUniform = m_program->uniformLocation("zoomFactor");
 
 
-    m_lookAt = QVector3D(0.1f, 0.2f, 0.2f);
+    m_lookAt = QVector3D(0.f, 0.f, 5.f);
     m_MVPMatrix.perspective(60.0f, 4.0f/3.0f, 0.1f, 1000.0f);
     m_MVPMatrix.lookAt(m_lookAt, QVector3D(0.f,0.f,0.f), QVector3D(0.f,1.f,0.f));
     m_MVPMatrix.rotate(QQuaternion::fromAxisAndAngle(QVector3D(1,0,0), 45.f));
@@ -283,7 +301,6 @@ void ViewWindow::render()
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         m_program->release();
-        //m_UpdateRender = false;
     }
 
 

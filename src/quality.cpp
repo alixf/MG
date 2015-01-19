@@ -25,7 +25,142 @@ void analyseArray(std::vector<float>& data, float& mean, float& sd, float& _min,
     sd = sqrt(sd / data.size());
 }
 
-float Quality::getAspectRatio1(const std::vector<Face>& faces, float& ratioMean, float& ratioSD, float& ratioMin, float& ratioMax)
+void Quality::MWA(std::vector<Vertex*>& vertices)
+{
+    std::vector<Vertex*>::iterator beg = vertices.begin();
+    std::vector<Vertex*>::iterator end = vertices.end();
+
+    for( ; beg != end; ++beg){
+        std::vector<Face*>::iterator beg_faces = (*beg)->faces.begin();
+        std::vector<Face*>::iterator end_faces = (*beg)->faces.end();
+
+        float3 Nmwa;
+        Nmwa.x = Nmwa.y = Nmwa.z = 0.f;
+        unsigned int cpt = 0;
+        for(  ;beg_faces != end_faces; ++beg_faces, ++cpt){
+            Edge *e1, *e2;
+            e1 = e2 = NULL;
+
+            if( (*beg_faces)->edges[0]->v1 == (*beg) || (*beg_faces)->edges[0]->v2 == (*beg) ) e1 = (*beg_faces)->edges[0];
+            if( (*beg_faces)->edges[1]->v1 == (*beg) || (*beg_faces)->edges[1]->v2 == (*beg)){
+                if(e1 == NULL) e1 = (*beg_faces)->edges[1];
+                else e2 = (*beg_faces)->edges[1];
+            }
+
+            if( (*beg_faces)->edges[2]->v1 == (*beg) || (*beg_faces)->edges[2]->v2 == (*beg)) e2 = (*beg_faces)->edges[2];
+
+            float3 v_e1, v_e2;
+            v_e1.x = e1->v2->x - e1->v1->x;
+            v_e1.y = e1->v2->y - e1->v1->y;
+            v_e1.z = e1->v2->z - e1->v1->z;
+
+            v_e2.x = e2->v2->x - e2->v1->x;
+            v_e2.y = e2->v2->y - e2->v1->y;
+            v_e2.z = e2->v2->z - e2->v1->z;
+
+            float dotE1E2 = v_e1.x * v_e2.x + v_e1.y * v_e2.y + v_e1.z * v_e2.z;
+
+            float angleE1E2 = static_cast<float>(acos(dotE1E2 / sqrt(v_e1.x * v_e1.x + v_e1.y * v_e1.y + v_e1.z * v_e1.z) * sqrt(v_e2.x * v_e2.x + v_e2.y * v_e2.y + v_e2.z * v_e2.z)));
+            Nmwa.x += angleE1E2 * (*beg_faces)->nx;
+            Nmwa.y += angleE1E2 * (*beg_faces)->ny;
+            Nmwa.z += angleE1E2 * (*beg_faces)->nz;
+
+        }
+        Nmwa.x /= static_cast<float>(cpt);
+        Nmwa.y /= static_cast<float>(cpt);
+        Nmwa.z /= static_cast<float>(cpt);
+        cpt = 0;
+    }
+
+}
+
+void Quality::MWRELR(std::vector<Vertex *> &vertices)
+{
+    std::vector<Vertex*>::iterator beg = vertices.begin();
+    std::vector<Vertex*>::iterator end = vertices.end();
+
+    for( ; beg != end; ++beg){
+        std::vector<Face*>::iterator beg_faces = (*beg)->faces.begin();
+        std::vector<Face*>::iterator end_faces = (*beg)->faces.end();
+
+        float3 Nmwa;
+        Nmwa.x = Nmwa.y = Nmwa.z = 0.f;
+        unsigned int cpt = 0;
+        for(  ;beg_faces != end_faces; ++beg_faces, ++cpt){
+            Edge *e1, *e2;
+            e1 = e2 = NULL;
+
+            if( (*beg_faces)->edges[0]->v1 == (*beg) || (*beg_faces)->edges[0]->v2 == (*beg) ) e1 = (*beg_faces)->edges[0];
+            if( (*beg_faces)->edges[1]->v1 == (*beg) || (*beg_faces)->edges[1]->v2 == (*beg)){
+                if(e1 == NULL) e1 = (*beg_faces)->edges[1];
+                else e2 = (*beg_faces)->edges[1];
+            }
+
+            if( (*beg_faces)->edges[2]->v1 == (*beg) || (*beg_faces)->edges[2]->v2 == (*beg)) e2 = (*beg_faces)->edges[2];
+
+            float3 v_e1, v_e2;
+            v_e1.x = e1->v2->x - e1->v1->x;
+            v_e1.y = e1->v2->y - e1->v1->y;
+            v_e1.z = e1->v2->z - e1->v1->z;
+
+            v_e2.x = e2->v2->x - e2->v1->x;
+            v_e2.y = e2->v2->y - e2->v1->y;
+            v_e2.z = e2->v2->z - e2->v1->z;
+
+            float lengthE1, lengthE2;
+            lengthE1 = sqrtf(v_e1.x * v_e1.x + v_e1.y * v_e1.y + v_e1.z * v_e1.z);
+            lengthE2 = sqrtf(v_e2.x * v_e2.x + v_e2.y * v_e2.y + v_e2.z * v_e2.z);
+
+            float sqrtE1E2 = sqrtf(lengthE1 * lengthE2);
+
+            Nmwa.x += (*beg_faces)->nx / sqrtE1E2;
+            Nmwa.y += (*beg_faces)->ny / sqrtE1E2;
+            Nmwa.z += (*beg_faces)->nz / sqrtE1E2;
+
+        }
+        Nmwa.x /= static_cast<float>(cpt);
+        Nmwa.y /= static_cast<float>(cpt);
+        Nmwa.z /= static_cast<float>(cpt);
+        cpt = 0;
+    }
+
+}
+
+void Quality::normaleComputation(std::vector<Face*>& faces)
+{
+    std::vector<Face*>::iterator beg = faces.begin();
+    std::vector<Face*>::iterator end = faces.end();
+
+
+
+    for(; beg != end; ++beg){
+        Edge* e1 = (*beg)->edges[0];
+        Edge* e2 = (*beg)->edges[1];
+        float3 v1,v2;
+        v1.x = e1->v2->x - e1->v1->x;
+        v1.y = e1->v2->y - e1->v1->y;
+        v1.z = e1->v2->z - e1->v1->z;
+
+        v2.x = e2->v2->x - e2->v1->x;
+        v2.y = e2->v2->y - e2->v1->y;
+        v2.z = e2->v2->z - e2->v1->z;
+
+        float3 normale;
+        normale.x = v1.y * v2.z - v1.z * v2.y;
+        normale.y = v1.x * v2.z - v1.z * v2.x;
+        normale.z = v1.x * v2.y - v2.x * v1.y;
+        normale.x = -normale.x;
+        normale.y = -normale.y;
+        normale.z = -normale.z;
+
+        (*beg)->nx = normale.x;
+        (*beg)->ny = normale.y;
+        (*beg)->nz = normale.z;
+
+    }
+}
+
+float Quality::getAspectRatio1(const std::vector<Face*>& faces, float& ratioMean, float& ratioSD, float& ratioMin, float& ratioMax)
 {
     QVector3D p1, p2, p3;
     float distp1p2, distp1p3, distp2p3;
@@ -38,11 +173,11 @@ float Quality::getAspectRatio1(const std::vector<Face>& faces, float& ratioMean,
     // Extract all ratios into data
     for (unsigned int i = 0; i < faces.size(); ++i)
     {
-        if (faces[i].vertices.size() == 3)
+        if (faces[i]->vertices.size() == 3)
         {
-            p1 = QVector3D(faces[i].vertices[0]->x, faces[i].vertices[0]->y, faces[i].vertices[0]->z);
-            p2 = QVector3D(faces[i].vertices[1]->x, faces[i].vertices[1]->y, faces[i].vertices[1]->z);
-            p3 = QVector3D(faces[i].vertices[2]->x, faces[i].vertices[2]->y, faces[i].vertices[2]->z);
+            p1 = QVector3D(faces[i]->vertices[0]->x, faces[i]->vertices[0]->y, faces[i]->vertices[0]->z);
+            p2 = QVector3D(faces[i]->vertices[1]->x, faces[i]->vertices[1]->y, faces[i]->vertices[1]->z);
+            p3 = QVector3D(faces[i]->vertices[2]->x, faces[i]->vertices[2]->y, faces[i]->vertices[2]->z);
 
             distp1p2 = distancePointToPoint(p1, p2);
             distp1p3 = distancePointToPoint(p1, p3);
@@ -75,7 +210,7 @@ float Quality::getAspectRatio1(const std::vector<Face>& faces, float& ratioMean,
     return ratioMean;
 }
 
-float Quality::getAspectRatio2(const std::vector<Face> &faces, float& ratioMean, float& ratioSD, float& ratioMin, float& ratioMax)
+float Quality::getAspectRatio2(const std::vector<Face*> &faces, float& ratioMean, float& ratioSD, float& ratioMin, float& ratioMax)
 {
     QVector3D p1,p2,p3;
     float distp1p2, distp1p3, distp2p3;
@@ -86,11 +221,11 @@ float Quality::getAspectRatio2(const std::vector<Face> &faces, float& ratioMean,
 
     for (unsigned int i = 0; i < faces.size(); ++i)
     {
-        if (faces[i].vertices.size() == 3)
+        if (faces[i]->vertices.size() == 3)
         {
-            p1 = QVector3D(faces[i].vertices[0]->x, faces[i].vertices[0]->y, faces[i].vertices[0]->z);
-            p2 = QVector3D(faces[i].vertices[1]->x, faces[i].vertices[1]->y, faces[i].vertices[1]->z);
-            p3 = QVector3D(faces[i].vertices[2]->x, faces[i].vertices[2]->y, faces[i].vertices[2]->z);
+            p1 = QVector3D(faces[i]->vertices[0]->x, faces[i]->vertices[0]->y, faces[i]->vertices[0]->z);
+            p2 = QVector3D(faces[i]->vertices[1]->x, faces[i]->vertices[1]->y, faces[i]->vertices[1]->z);
+            p3 = QVector3D(faces[i]->vertices[2]->x, faces[i]->vertices[2]->y, faces[i]->vertices[2]->z);
 
             distp1p2 = distancePointToPoint(p1, p2);
             distp1p3 = distancePointToPoint(p1, p3);
@@ -105,7 +240,7 @@ float Quality::getAspectRatio2(const std::vector<Face> &faces, float& ratioMean,
     return ratioMean;
 }
 
-float Quality::getAspectRatio3(const std::vector<Face> &faces, float& ratioMean, float& ratioSD, float& ratioMin, float& ratioMax)
+float Quality::getAspectRatio3(const std::vector<Face*> &faces, float& ratioMean, float& ratioSD, float& ratioMin, float& ratioMax)
 {
 
     QVector3D p1;
@@ -124,11 +259,11 @@ float Quality::getAspectRatio3(const std::vector<Face> &faces, float& ratioMean,
 
     for (unsigned int i = 0; i < faces.size(); ++i)
     {
-        if (faces[i].vertices.size() == 3)
+        if (faces[i]->vertices.size() == 3)
         {
-            p1 = QVector3D(faces[i].vertices[0]->x, faces[i].vertices[0]->y, faces[i].vertices[0]->z);
-            p2 = QVector3D(faces[i].vertices[1]->x, faces[i].vertices[1]->y, faces[i].vertices[1]->z);
-            p3 = QVector3D(faces[i].vertices[2]->x, faces[i].vertices[2]->y, faces[i].vertices[2]->z);
+            p1 = QVector3D(faces[i]->vertices[0]->x, faces[i]->vertices[0]->y, faces[i]->vertices[0]->z);
+            p2 = QVector3D(faces[i]->vertices[1]->x, faces[i]->vertices[1]->y, faces[i]->vertices[1]->z);
+            p3 = QVector3D(faces[i]->vertices[2]->x, faces[i]->vertices[2]->y, faces[i]->vertices[2]->z);
 
             distp1p2 = distancePointToPoint(p1, p2);
             distp1p3 = distancePointToPoint(p1, p3);
@@ -207,7 +342,7 @@ void Quality::extractBoudaries (std::vector<Edge*>& edges, std::vector<Edge*>& b
 {
     for (unsigned int i = 0; i < edges.size(); ++i)
     {
-        if (edges[i]->faces.size() < 2)
+        if (edges[i]->faces.size() == 1)
         {
             boundaries.push_back(edges[i]);
             edges[i]->v1->r = 1.f;
